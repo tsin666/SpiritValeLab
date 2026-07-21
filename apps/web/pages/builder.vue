@@ -80,7 +80,7 @@ const equipmentCategories = computed(() => {
 const filteredSkills = computed(() => {
   const term = skillSearch.value.trim().toLowerCase()
   return options.value.skills
-    .filter(item => matchesArchetype(item) && (!term || `${item.id} ${item.slug} ${optionName(item)} ${localizedText(item.name,'zh')} ${localizedText(item.name,'en')}`.toLowerCase().includes(term)))
+    .filter(item => matchesSkillArchetype(item) && (!term || `${item.id} ${item.slug} ${optionName(item)} ${localizedText(item.name,'zh')} ${localizedText(item.name,'en')}`.toLowerCase().includes(term)))
     .sort((left, right) => Number(isRecommended(right)) - Number(isRecommended(left)))
     .slice(0, 80)
 })
@@ -92,8 +92,8 @@ const validation = computed(() => ({
   archetype: Boolean(archetype.value),
   difficulty: options.value.difficulties.includes(difficulty.value),
   summary: summary.value.trim().length >= 5,
-  skills: selectedSkills.value.length > 0 && selectedSkills.value.length <= 8 && selectedSkillItems.value.every(item => matchesArchetype(item)),
-  equipment: selectedEquipment.value.length <= 12 && selectedEquipmentItems.value.every(item => matchesArchetype(item)),
+  skills: selectedSkills.value.length > 0 && selectedSkills.value.length <= 8 && selectedSkillItems.value.every(item => matchesSkillArchetype(item)),
+  equipment: selectedEquipment.value.length <= 12 && selectedEquipmentItems.value.every(item => matchesEquipmentArchetype(item)),
   tags: !tagsValidationError.value,
   guide: !guideValidationError.value
 }))
@@ -130,8 +130,8 @@ watch(archetype, (next, previous) => {
   if (!next || next === previous) return
   const target = options.value.archetypes.find(item => item.id === next || item.slug === next)
   if (!target) return
-  const incompatibleEquipment = new Set(selectedEquipmentItems.value.filter(item => !matchesArchetype(item, target)).map(item => item.id))
-  const incompatibleSkills = new Set(selectedSkillItems.value.filter(item => !matchesArchetype(item, target)).map(item => item.id))
+  const incompatibleEquipment = new Set(selectedEquipmentItems.value.filter(item => !matchesEquipmentArchetype(item, target)).map(item => item.id))
+  const incompatibleSkills = new Set(selectedSkillItems.value.filter(item => !matchesSkillArchetype(item, target)).map(item => item.id))
   if (!incompatibleEquipment.size && !incompatibleSkills.size) return
   selectedEquipment.value = selectedEquipment.value.filter(id => !incompatibleEquipment.has(id))
   selectedSkills.value = selectedSkills.value.filter(id => !incompatibleSkills.has(id))
@@ -141,31 +141,64 @@ watch(archetype, (next, previous) => {
   })
 }, { flush: 'post' })
 
-function relationMatches(values: NonNullable<BuilderOption['allowedArchetypes']> | string[], target?: BuilderOption) {
-  if (!target) return false
-  const wanted = new Set([
+function archetypeIdentifiers(target?: BuilderOption) {
+  if (!target) return []
+  return [...new Set([
     target.id,
     target.slug,
+    target.displayName,
     optionName(target),
     localizedText(target.name, 'zh'),
     localizedText(target.name, 'en')
-  ].filter(Boolean).map(value => value.toLowerCase()))
+  ].filter(Boolean).map(value => value.toLocaleLowerCase('en-US')))]
+}
+
+function findArchetype(reference?: string | null) {
+  if (!reference) return undefined
+  const wanted = reference.toLocaleLowerCase('en-US')
+  return options.value.archetypes.find(item => archetypeIdentifiers(item).includes(wanted))
+}
+
+function archetypeLineage(target?: BuilderOption) {
+  const lineage: BuilderOption[] = []
+  const seen = new Set<string>()
+  let current = target
+  while (current) {
+    const currentKey = current.id.toLocaleLowerCase('en-US')
+    if (seen.has(currentKey)) break
+    lineage.push(current)
+    seen.add(currentKey)
+    current = findArchetype(current.requiredClassId)
+  }
+  return lineage
+}
+
+function relationMatches(values: NonNullable<BuilderOption['allowedArchetypes']> | string[], target?: BuilderOption) {
+  const wanted = new Set(archetypeIdentifiers(target))
+  if (!wanted.size) return false
   return values.some(value => {
     const token = typeof value === 'string' ? value : (value.value || value.label || '')
-    return wanted.has(token.toLowerCase())
+    return wanted.has(token.toLocaleLowerCase('en-US'))
   })
 }
 
-function matchesArchetype(item: BuilderOption | Equipment, target = selectedArchetype.value) {
+function matchesSkillArchetype(item: BuilderOption, target = selectedArchetype.value) {
   const allowed = item.allowedArchetypes || []
   const restricted = item.hasArchetypeRestriction ?? allowed.length > 0
   if (!target || !restricted || !allowed.length) return true
   return relationMatches(allowed, target)
 }
 
+function matchesEquipmentArchetype(item: Equipment, target = selectedArchetype.value) {
+  const allowed = item.allowedArchetypes || []
+  const restricted = item.hasArchetypeRestriction ?? allowed.length > 0
+  if (!target || !restricted || !allowed.length) return true
+  return archetypeLineage(target).some(candidate => relationMatches(allowed, candidate))
+}
+
 function isRecommended(item: BuilderOption) {
   const recommended = item.recommendedArchetypes || []
-  return Boolean(selectedArchetype.value && recommended.length && relationMatches(recommended, selectedArchetype.value))
+  return Boolean(selectedArchetype.value && recommended.length && archetypeLineage(selectedArchetype.value).some(candidate => relationMatches(recommended, candidate)))
 }
 
 function toggle(kind: 'skills' | 'equipment', id: string, limit: number) {

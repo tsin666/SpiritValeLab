@@ -58,6 +58,43 @@ for (const [advanced, base] of Object.entries(lineage.requiredClassByArchetype))
   advancesToByBase.set(key, [...(advancesToByBase.get(key) || []), advanced])
 }
 
+/**
+ * Returns a target class followed by every base class it can legitimately
+ * inherit from. The game binary's `GetRequiredClass` table is the source of
+ * truth. We keep the original IDs for API consumers but use canonical keys
+ * and a visited set so malformed future lineage data cannot loop forever.
+ *
+ * Special, profession and unknown classes deliberately only resolve to
+ * themselves: they are not part of the combat advancement chain.
+ */
+export function archetypeLineageIds(archetypeId: string): string[] {
+  const self = archetypeId.trim()
+  if (!self) return []
+
+  const selfKey = canonical(self)
+  if (specialArchetypes.has(selfKey) || professionArchetypes.has(selfKey)) return [self]
+
+  const result = [self]
+  const visited = new Set([selfKey])
+  let currentKey = selfKey
+  while (true) {
+    const requiredClass = requiredClassByArchetype.get(currentKey)
+    if (!requiredClass) break
+    const requiredKey = canonical(requiredClass)
+    if (!requiredKey || visited.has(requiredKey)) break
+    result.push(requiredClass)
+    visited.add(requiredKey)
+    currentKey = requiredKey
+  }
+  return result
+}
+
+/** True when a class-bound resource is usable by the target class. */
+export function inheritsArchetype(targetArchetypeId: string, resourceArchetypeId: string): boolean {
+  const resourceKey = canonical(resourceArchetypeId)
+  return Boolean(resourceKey) && archetypeLineageIds(targetArchetypeId).some(id => canonical(id) === resourceKey)
+}
+
 export type ArchetypeRecord = Record<string, unknown> & {
   id: string
   slug: string

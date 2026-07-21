@@ -11,6 +11,7 @@ import {
   slugify,
   type LocalizedText
 } from './catalog-utils.js'
+import { inheritsArchetype } from './archetypes.js'
 
 export const equipmentCategories = ['weapon', 'offhand', 'armor', 'accessory', 'class-item', 'utility', 'other'] as const
 export type EquipmentCategory = typeof equipmentCategories[number]
@@ -267,8 +268,9 @@ function filterEquipment(index: IndexedEquipment[], query: EquipmentQuery, omit?
     if (omit !== 'category' && query.category && item.category !== query.category) return false
     if (omit !== 'archetype' && query.archetype) {
       const explicitlyAllowed = item.allowedArchetypes.some(value => canonical(value) === canonical(query.archetype!))
+      const inheritedAllowed = item.allowedArchetypes.some(value => inheritsArchetype(query.archetype!, value))
       const unrestricted = item.allowedArchetypes.length === 0
-      if (query.compatible ? !unrestricted && !explicitlyAllowed : !explicitlyAllowed) return false
+      if (query.compatible ? !unrestricted && !inheritedAllowed : !explicitlyAllowed) return false
     }
     if (omit !== 'slot' && query.slot && !item.slots.some(slot => equalsFacet(slot, query.slot))) return false
     if (omit !== 'type' && !equalsFacet(item.type, query.type)) return false

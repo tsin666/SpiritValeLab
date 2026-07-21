@@ -26,6 +26,7 @@ import {
   createArchetypeCatalog,
   createSkillCatalog,
   findArchetype,
+  inheritsArchetype,
   listArchetypes,
   skillsByIds,
   type ArchetypeRecord,
@@ -399,7 +400,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
     for (const selection of input.equipment) {
       const item = equipmentById.get(canonical(selection.id))
       if (!item) return reply.code(400).send({ error: 'Unknown equipment', code: 'UNKNOWN_EQUIPMENT', value: selection.id })
-      if (item.allowedArchetypes.length && !item.allowedArchetypes.some(value => canonical(value) === canonical(archetype.id))) {
+      if (item.allowedArchetypes.length && !item.allowedArchetypes.some(value => inheritsArchetype(archetype.id, value))) {
         return reply.code(400).send({ error: 'Equipment is not available to this archetype', code: 'EQUIPMENT_ARCHETYPE_MISMATCH', value: selection.id })
       }
       selectedEquipment.push({ item, slot: selection.slot })
@@ -484,7 +485,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
       .filter(build => canonical(readString(asRecord(build).archetype) || '') === canonical(archetype.id))
       .flatMap(build => arrayOrEmpty(asRecord(build).skills).map(skill => readString(asRecord(skill).id)).filter((id): id is string => Boolean(id)))
     const equipment = allEquipment
-      .filter(item => item.allowedArchetypes.some(value => canonical(value) === canonical(archetype.id)))
+      .filter(item => item.allowedArchetypes.some(value => inheritsArchetype(archetype.id, value)))
       .map(item => ({
         id: item.id,
         slug: item.slug,

@@ -429,6 +429,53 @@
     "validationError": "请先完成标题、职业、难度、简介，并至少选择一个技能。",
     "duplicateTitle": "已有同名构筑，请换一个更具体的标题。",
     "saveFailed": "保存失败，请检查内容后重试。",
+    "loadout": {
+      "title": "全职业配装盘",
+      "subtitle": "围绕当前职业整理装备、神器、魔导书、技能与角色属性。",
+      "equipment": "装备",
+      "artifacts": "神器",
+      "grimoires": "魔导书",
+      "character": "角色",
+      "skills": "技能",
+      "emptySlot": "空槽位",
+      "selectSlot": "选择此槽位",
+      "classPreview": "职业预览",
+      "baseTree": "基础职业技能树",
+      "advancedTree": "进阶职业技能树",
+      "level": "角色等级",
+      "jobLevel": "职业等级",
+      "stance": "姿态",
+      "noStats": "尚未填写角色属性",
+      "noSkills": "尚未配置技能",
+      "equippedCount": "已装备 {count} 件",
+      "artifactCount": "已配置 {count} 件神器",
+      "grimoireCount": "已配置 {count} 本魔导书",
+      "equipmentSlots": {
+        "main-hand": "主手",
+        "off-hand": "副手",
+        "head": "头部",
+        "legs": "腿部",
+        "feet": "鞋子",
+        "chest": "胸甲",
+        "accessory-left": "左饰品",
+        "accessory-right": "右饰品",
+        "eyewear": "眼饰",
+        "back": "背部"
+      },
+      "artifactSlots": {
+        "Rune": "符文",
+        "Jewel": "宝珠",
+        "Scroll": "卷轴",
+        "Relic": "圣物"
+      },
+      "stances": {
+        "None": "无",
+        "Unarmed": "徒手",
+        "OneHanded": "单持",
+        "TwoHanded": "双手",
+        "DualWield": "双持"
+      }
+    },
     "beginner": "入门",
     "intermediate": "进阶",
     "expert": "专家"

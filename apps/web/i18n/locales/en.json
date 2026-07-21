@@ -429,6 +429,53 @@
     "validationError": "Complete the title, class, difficulty, and summary, then select at least one skill.",
     "duplicateTitle": "A build with that title already exists. Try a more specific title.",
     "saveFailed": "Could not save the build. Check the content and try again.",
+    "loadout": {
+      "title": "All-class loadout board",
+      "subtitle": "Organize equipment, artifacts, grimoires, skills, and character stats around the selected class.",
+      "equipment": "Equipment",
+      "artifacts": "Artifacts",
+      "grimoires": "Grimoires",
+      "character": "Character",
+      "skills": "Skills",
+      "emptySlot": "Empty slot",
+      "selectSlot": "Select this slot",
+      "classPreview": "Class preview",
+      "baseTree": "Base class skill tree",
+      "advancedTree": "Advanced class skill tree",
+      "level": "Character level",
+      "jobLevel": "Job level",
+      "stance": "Stance",
+      "noStats": "No character stats entered",
+      "noSkills": "No skills configured",
+      "equippedCount": "{count} items equipped",
+      "artifactCount": "{count} artifacts configured",
+      "grimoireCount": "{count} grimoires configured",
+      "equipmentSlots": {
+        "main-hand": "Main hand",
+        "off-hand": "Off hand",
+        "head": "Head",
+        "legs": "Legs",
+        "feet": "Feet",
+        "chest": "Chest",
+        "accessory-left": "Left accessory",
+        "accessory-right": "Right accessory",
+        "eyewear": "Eyewear",
+        "back": "Back"
+      },
+      "artifactSlots": {
+        "Rune": "Rune",
+        "Jewel": "Jewel",
+        "Scroll": "Scroll",
+        "Relic": "Relic"
+      },
+      "stances": {
+        "None": "None",
+        "Unarmed": "Unarmed",
+        "OneHanded": "One-handed",
+        "TwoHanded": "Two-handed",
+        "DualWield": "Dual wield"
+      }
+    },
     "beginner": "Beginner",
     "intermediate": "Intermediate",
     "expert": "Expert"

@@ -14,7 +14,7 @@ SpiritVale 的双语资料库、职业/装备浏览、词条与套装搜索，�
 - 技能、神器、宝石、卡牌、怪物、状态、武器与关联配置的结构化属性、搜索和详情
 - 玩家 BD 构筑器，MongoDB 持久化、Redis 列表缓存和唯一分享链接；不使用演示 BD 填充大厅
 - 匿名唯一浏览、点赞切换及公开公式 `点赞 × 5 + 独立浏览` 的 BD 排名
-- PM2 直接运行 Web、API 与 WSL Redis 守护；不依赖 Docker
+- PM2 直接运行 Web、API 与 WSL Redis 守护
 
 ## 技术栈
 
@@ -32,7 +32,7 @@ npm.cmd install
 npm.cmd run build
 ```
 
-## 使用 PM2 运行（无需 Docker）
+## 使用 PM2 直接运行
 
 默认连接：
 

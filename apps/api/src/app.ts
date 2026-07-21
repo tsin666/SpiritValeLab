@@ -1162,6 +1162,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
       artifacts: artifactRecords.map(value => {
         const item = asRecord(value)
         const option = compactRuntimeOption(item)
+        const description = describedCatalogSnapshot(item)
         const parts = arrayOrEmpty(item.parts).map((partValue, index) => {
           const part = asRecord(partValue)
           return {
@@ -1172,6 +1173,12 @@ export async function buildApp(options: BuildAppOptions = {}) {
         return {
           ...option,
           icon: option.icon || parts[0]?.icon || null,
+          descriptionZh: description.descriptionZh || null,
+          descriptionEn: description.descriptionEn || null,
+          fullSet: runtimeEffectSnapshots(item.fullSet),
+          perPiece: runtimeEffectSnapshots(item.perPiece),
+          perRefine: runtimeEffectSnapshots(item.perRefine),
+          individual: runtimeEffectSnapshots(item.individual),
           parts,
           partCount: parts.length
         }
@@ -1179,19 +1186,27 @@ export async function buildApp(options: BuildAppOptions = {}) {
       gems: gemRecords.map(value => {
         const item = asRecord(value)
         const localizedAffix = asRecord(item.affix)
+        const description = describedCatalogSnapshot(item)
         return {
           ...compactRuntimeOption(item),
+          descriptionZh: description.descriptionZh || null,
+          descriptionEn: description.descriptionEn || null,
           affix: Object.keys(localizedAffix).length
             ? localized(item.affix)
             : readString(item.runtimeAffix),
+          stats: runtimeEffectSnapshots(item.stats),
           isBoss: item.isBoss === true
         }
       }),
       cards: cardRecords.map(value => {
         const item = asRecord(value)
+        const description = describedCatalogSnapshot(item)
         return {
           ...compactRuntimeOption(item),
+          descriptionZh: description.descriptionZh || null,
+          descriptionEn: description.descriptionEn || null,
           equipClass: readString(item.equipClass),
+          stats: runtimeEffectSnapshots(item.stats),
           unique: item.unique === true,
           isBoss: item.isBoss === true
         }

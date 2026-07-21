@@ -26,6 +26,9 @@ function localizedEnglish(value: unknown): string {
 test('builder options expose the complete class-agnostic runtime catalogs and official enums', async () => {
   const response = await app.inject({ method: 'GET', url: '/api/builder/options' })
   assert.equal(response.statusCode, 200, JSON.stringify(response.json()))
+  assert.equal(response.headers['content-encoding'], undefined)
+  const uncompressedBytes = Buffer.byteLength(response.payload, 'utf8')
+  assert.ok(uncompressedBytes < 1_000_000, `Builder options response is ${uncompressedBytes} bytes; expected less than 1 MB`)
   const options = response.json() as JsonRecord
 
   assert.equal(options.archetypes.length, 31)
@@ -43,6 +46,7 @@ test('builder options expose the complete class-agnostic runtime catalogs and of
   assert.ok(options.archetypes.every((item: JsonRecord) => item.id && item.slug && item.name))
   assert.ok(options.skills.every((item: JsonRecord) => item.id && item.slug && item.name))
   assert.ok(options.equipment.every((item: JsonRecord) => item.id && item.slug && item.name))
+  assert.ok(options.equipment.every((item: JsonRecord) => !('primaryStats' in item) && !('secondaryStats' in item)))
   assert.deepEqual(options.difficulties, ['入门', '进阶', '专家'])
 
   assert.deepEqual(options.equipmentSlots, [
@@ -152,16 +156,38 @@ test('builder options include enriched representative records from every loadout
   assert.equal(mageArtifact.partCount, 4)
   assert.deepEqual(mageArtifact.parts.map((part: JsonRecord) => part.index), [0, 1, 2, 3])
   assert.ok(mageArtifact.parts.every((part: JsonRecord) => /^\/game-assets\/runtime-icons\/.+\.png$/.test(part.icon)))
+  assert.equal(mageArtifact.descriptionZh, null)
+  assert.equal(mageArtifact.descriptionEn, null)
+  assert.deepEqual(mageArtifact.fullSet.map((effect: JsonRecord) => effect.name), ['AllStats_3'])
+  assert.deepEqual(mageArtifact.perPiece, [])
+  assert.deepEqual(mageArtifact.perRefine, [])
+  assert.deepEqual(mageArtifact.individual.map((effect: JsonRecord) => effect.name), [
+    'SkillDamage_5_2_Fireball',
+    'SkillDamage_5_2_IceShard',
+    'SkillDamage_5_2_EarthSpikes',
+    'SkillDamage_5_2_ThunderStorm'
+  ])
+  assert.deepEqual(mageArtifact.fullSet[0].value, { base: 3, perLevel: 0, string: '', string2: '' })
 
   const meteorGem = options.gems.find((item: JsonRecord) => item.id === 'Meteor Gem')
   assert.equal(localizedEnglish(meteorGem.name), 'Meteor Gem')
   assert.equal(localizedEnglish(meteorGem.affix), 'Meteor')
   assert.match(meteorGem.icon, /^\/game-assets\/runtime-icons\/.+\.png$/)
+  assert.match(meteorGem.descriptionZh, /Wizard/)
+  assert.match(meteorGem.descriptionEn, /memories of an old Wizard/i)
+  assert.equal(meteorGem.stats.length, 1)
+  assert.equal(meteorGem.stats[0].name, 'SkillDamage_2_Meteor')
+  assert.deepEqual(meteorGem.stats[0].value, { base: 0, perLevel: 2, string: 'Meteor', string2: '' })
 
   const abominationCard = options.cards.find((item: JsonRecord) => item.id === 'Abomination')
   assert.equal(localizedEnglish(abominationCard.name), 'Abomination Card')
   assert.equal(abominationCard.equipClass, 'Chest')
   assert.match(abominationCard.icon, /^\/game-assets\/runtime-icons\/.+\.png$/)
+  assert.equal(abominationCard.descriptionZh, null)
+  assert.match(abominationCard.descriptionEn, /stitched flesh and old bone/i)
+  assert.equal(abominationCard.stats.length, 2)
+  assert.equal(abominationCard.stats[0].name, 'Atk_1')
+  assert.deepEqual(abominationCard.stats[0].value, { base: 0, perLevel: 1, string: '', string2: '' })
 })
 
 test('builder options reject unsupported query parameters', async () => {

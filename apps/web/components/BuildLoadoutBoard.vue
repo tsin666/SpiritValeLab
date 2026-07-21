@@ -15,6 +15,7 @@ import type {
   BuildSkillAllocation,
   RuntimeEffect
 } from '~/composables/useApi'
+import { CANONICAL_EQUIPMENT_SLOTS, splitEquipmentColumns } from '~/utils/equipment-slots'
 
 const props = withDefaults(defineProps<{
   options: BuilderOptions
@@ -45,18 +46,7 @@ const emit = defineEmits<{
 const { t, te, locale } = useI18n()
 const { gameLocale, gameText, statText } = useGameLocale()
 
-const canonicalEquipmentSlots: BuildEquipmentSlot[] = [
-  'head',
-  'eyewear',
-  'back',
-  'chest',
-  'main-hand',
-  'off-hand',
-  'legs',
-  'feet',
-  'accessory-left',
-  'accessory-right'
-]
+const canonicalEquipmentSlots: BuildEquipmentSlot[] = [...CANONICAL_EQUIPMENT_SLOTS]
 const canonicalArtifactSlots: BuildArtifactSlot[] = ['Rune', 'Jewel', 'Scroll', 'Relic']
 const grimoireSlotIndexes = [0, 1, 2] as const
 const skillStages: ArchetypeStage[] = ['base', 'advanced', 'profession', 'special']
@@ -136,8 +126,9 @@ const equipmentCards = computed(() => equipmentSlots.value.map((slot, index) => 
     details: selection ? equipmentDetails(selection, catalog) : []
   }
 }))
-const leftEquipmentCards = computed(() => equipmentCards.value.filter(card => card.index % 2 === 0))
-const rightEquipmentCards = computed(() => equipmentCards.value.filter(card => card.index % 2 === 1))
+const equipmentColumns = computed(() => splitEquipmentColumns(equipmentCards.value))
+const leftEquipmentCards = computed(() => equipmentColumns.value.left)
+const rightEquipmentCards = computed(() => equipmentColumns.value.right)
 const equipmentSetCards = computed(() => {
   const unique = new Map<string, BuildEquipmentSet>()
   for (const selection of props.equipmentSelections) {
@@ -501,6 +492,7 @@ function stanceLabel() {
           v-for="card in leftEquipmentCards"
           :key="card.slot"
           :type="isEditable ? 'button' : undefined"
+          :data-equipment-slot="card.slot"
           class="build-loadout-slot"
           :class="{ 'is-filled': card.selection, 'is-editable': isEditable }"
           :aria-label="isEditable
@@ -545,6 +537,7 @@ function stanceLabel() {
           v-for="card in rightEquipmentCards"
           :key="card.slot"
           :type="isEditable ? 'button' : undefined"
+          :data-equipment-slot="card.slot"
           class="build-loadout-slot"
           :class="{ 'is-filled': card.selection, 'is-editable': isEditable }"
           :aria-label="isEditable

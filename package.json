@@ -18,7 +18,9 @@
     "pm2:logs": "pm2 logs",
     "pm2:status": "pm2 status",
     "typecheck": "npm run typecheck -w @spiritvale/api",
+    "test:web": "npm test -w @spiritvale/web",
     "test:api": "npm test -w @spiritvale/api",
+    "verify:web": "npm run test:web && npm run build -w @spiritvale/web",
     "verify:api": "npm run verify -w @spiritvale/api",
     "verify:data": "node scripts/verify-game-data.mjs",
     "verify:runtime": "node scripts/verify-runtime.mjs"

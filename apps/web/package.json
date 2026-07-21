@@ -3,12 +3,21 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prepare:ocr": "node ../../scripts/prepare-ocr-assets.mjs",
+    "predev": "npm run prepare:ocr",
     "dev": "nuxt dev",
+    "prebuild": "npm run prepare:ocr",
     "build": "nuxt build",
-    "generate": "nuxt generate"
+    "pregenerate": "npm run prepare:ocr",
+    "generate": "nuxt generate",
+    "test": "node --test test/*.test.ts"
   },
   "dependencies": {
+    "@tesseract.js-data/chi_sim": "1.0.0",
+    "@tesseract.js-data/eng": "1.0.0",
     "nuxt": "4.5.0",
+    "tesseract.js": "7.0.0",
+    "tesseract.js-core": "7.0.0",
     "vue": "3.5.40"
   },
   "devDependencies": {

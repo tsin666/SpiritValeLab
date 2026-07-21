@@ -28,6 +28,18 @@ type RuntimeCatalog = {
 
 const runtimeCatalog = runtimeCatalogJson as unknown as RuntimeCatalog
 
+function runtimeEnumNames(enumName: string): readonly string[] {
+  return Object.freeze((runtimeCatalog.enums[enumName] || []).map(entry => entry.name))
+}
+
+// Keep these values sourced from the extracted game enums. They are exported
+// as names (rather than their serialized numeric values) because every public
+// BD snapshot stores the stable, human-readable enum member.
+export const StatType = runtimeEnumNames('StatType')
+export const StanceType = runtimeEnumNames('StanceType')
+export const EquipSlot = runtimeEnumNames('EquipSlot')
+export const ArtifactSlot = runtimeEnumNames('ArtifactSlot')
+
 function recordMap(records: readonly unknown[]): Map<string, Record<string, unknown>> {
   const result = new Map<string, Record<string, unknown>>()
   for (const value of records) {

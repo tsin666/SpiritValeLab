@@ -9,6 +9,53 @@ export type BuildSkill = {
   icon?: string
 }
 
+export type BuildStatValue = {
+  type: string
+  value: number
+  bonus?: number
+  unit?: 'flat' | 'percent'
+  subjectId?: string
+}
+
+export type BuildCharacterSnapshot = {
+  name?: string
+  level?: number
+  jobLevel?: number
+  stance?: 'None' | 'Unarmed' | 'OneHanded' | 'TwoHanded' | 'DualWield'
+  stats?: BuildStatValue[]
+}
+
+export type BuildSkillAllocation = BuildSkill & {
+  kind: 'active' | 'passive'
+  level: number
+  maxLevel: number
+  treeArchetype: string
+  treeArchetypeSource: 'user-confirmed'
+}
+
+export type BuildEquipmentCard = {
+  slotIndex: number
+  id: string
+  slug?: string
+  name: string
+  nameZh?: string
+  nameEn?: string
+  icon?: string
+  equipClass: string
+}
+
+export type BuildEquipmentSlot =
+  | 'main-hand'
+  | 'off-hand'
+  | 'head'
+  | 'legs'
+  | 'feet'
+  | 'chest'
+  | 'accessory-left'
+  | 'accessory-right'
+  | 'eyewear'
+  | 'back'
+
 export type BuildEquipment = {
   id: string
   slug?: string
@@ -18,6 +65,47 @@ export type BuildEquipment = {
   nameEn?: string
   slot: string
   slotEn?: string
+  icon?: string
+  slotKey?: BuildEquipmentSlot
+  refineLevel?: number
+  potential?: number
+  actualAffixes?: BuildStatValue[]
+  cards?: BuildEquipmentCard[]
+}
+
+export type BuildArtifactSlot = 'Rune' | 'Jewel' | 'Scroll' | 'Relic'
+
+export type BuildArtifactGem = {
+  id: string
+  slug?: string
+  name: string
+  nameZh?: string
+  nameEn?: string
+  icon?: string
+  affix?: string
+}
+
+export type BuildArtifact = {
+  slot: BuildArtifactSlot
+  partIndex: 0 | 1 | 2 | 3
+  id: string
+  slug?: string
+  name: string
+  nameZh?: string
+  nameEn?: string
+  partIcon?: string
+  refineLevel?: number
+  actualAffixes?: BuildStatValue[]
+  gem?: BuildArtifactGem
+}
+
+export type BuildGrimoire = {
+  slotIndex: 0 | 1 | 2
+  id: string
+  slug?: string
+  name: string
+  nameZh?: string
+  nameEn?: string
   icon?: string
 }
 
@@ -49,8 +137,13 @@ export type Build = {
   updatedAt: string
   color?: string
   classIcon?: string
+  snapshotVersion?: 1
+  character?: BuildCharacterSnapshot
   skills: BuildSkill[]
+  skillTree?: BuildSkillAllocation[]
   equipment: BuildEquipment[]
+  artifacts?: BuildArtifact[]
+  grimoires?: BuildGrimoire[]
   metrics: BuildMetric[]
 }
 

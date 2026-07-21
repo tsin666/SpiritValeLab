@@ -27,6 +27,7 @@ import {
   createArchetypeCatalog,
   createSkillCatalog,
   findArchetype,
+  archetypeLineageIds,
   inheritsArchetype,
   listArchetypes,
   skillsByIds,
@@ -36,10 +37,14 @@ import {
 import { arrayOrEmpty, asRecord, canonical, flattenSearchText, humanize, readString, slugify } from './catalog-utils.js'
 import {
   runtimeArchetypeRecords,
+  ArtifactSlot,
+  EquipSlot,
   runtimeCatalogKinds,
   runtimeDataMeta,
   runtimeEquipmentRecords,
   runtimeRecordsForKind,
+  StanceType,
+  StatType,
   type RuntimeCatalogKind
 } from './runtime-data.js'
 import { createOcrCatalogMatcher, ocrCatalogKinds, type OcrCatalogSources } from './ocr/catalog-matcher.js'
@@ -86,9 +91,79 @@ const catalogDetailParamsSchema = z.object({
 const buildSelectionSchema = z.object({
   id: z.string().trim().min(1).max(120)
 }).strict()
+const finiteBuildNumberSchema = z.number().finite().min(-1_000_000_000).max(1_000_000_000)
+const statTypeSchema = z.enum(StatType as unknown as [string, ...string[]])
+const stanceTypeSchema = z.enum(StanceType as unknown as [string, ...string[]])
+const artifactSlotSchema = z.enum(ArtifactSlot as unknown as [string, ...string[]])
+const equipSlotKeyByName: Readonly<Record<string, string>> = {
+  Mainhand: 'main-hand',
+  Offhand: 'off-hand',
+  Head: 'head',
+  Legs: 'legs',
+  Feet: 'feet',
+  Chest: 'chest',
+  AccessoryLeft: 'accessory-left',
+  AccessoryRight: 'accessory-right',
+  Eyewear: 'eyewear',
+  Back: 'back'
+}
+const buildEquipSlotKeys = EquipSlot
+  .map(name => equipSlotKeyByName[name])
+  .filter((value): value is string => Boolean(value))
+const equipSlotKeySchema = z.enum(buildEquipSlotKeys as unknown as [string, ...string[]])
+const buildStatValueSchema = z.object({
+  type: statTypeSchema,
+  value: finiteBuildNumberSchema,
+  bonus: finiteBuildNumberSchema.optional(),
+  unit: z.enum(['flat', 'percent']).default('flat'),
+  subjectId: z.string().trim().min(1).max(120).optional()
+}).strict()
+const uniqueStatTypes = (items: Array<{ type: string }>) => new Set(items.map(item => item.type)).size === items.length
+const uniqueStatSubjects = (items: Array<{ type: string; subjectId?: string }>) => new Set(items
+  .map(item => `${item.type}:${canonical(item.subjectId || '')}`)).size === items.length
+const buildStatValuesSchema = (maximum: number, uniqueness: 'type' | 'subject' = 'subject') => z.array(buildStatValueSchema).max(maximum)
+  .refine(uniqueness === 'type' ? uniqueStatTypes : uniqueStatSubjects, {
+    message: uniqueness === 'type' ? 'Stat types must be unique' : 'Stat type and subject pairs must be unique'
+  })
+const equipmentCardSelectionSchema = z.object({
+  slotIndex: z.number().int().min(0).max(3),
+  id: z.string().trim().min(1).max(120)
+}).strict()
 const equipmentSelectionSchema = z.object({
   id: z.string().trim().min(1).max(120),
-  slot: z.string().trim().min(1).max(50).optional()
+  slot: z.string().trim().min(1).max(50).optional(),
+  slotKey: equipSlotKeySchema.optional(),
+  refineLevel: z.number().int().min(0).max(100).optional(),
+  potential: z.number().int().min(0).max(100).optional(),
+  actualAffixes: buildStatValuesSchema(8).default([]),
+  cards: z.array(equipmentCardSelectionSchema).max(4)
+    .refine(items => new Set(items.map(item => item.slotIndex)).size === items.length, { message: 'Equipment card slot indexes must be unique' })
+    .default([])
+}).strict()
+const characterSnapshotSchema = z.object({
+  name: z.string().trim().min(1).max(50).optional(),
+  level: z.number().int().min(1).max(1000).optional(),
+  jobLevel: z.number().int().min(0).max(1000).optional(),
+  stance: stanceTypeSchema.optional(),
+  stats: buildStatValuesSchema(64, 'type').default([])
+}).strict()
+const skillTreeSelectionSchema = z.object({
+  kind: z.enum(['active', 'passive']),
+  id: z.string().trim().min(1).max(120),
+  level: z.number().int().min(0).max(10),
+  treeArchetype: z.string().trim().min(1).max(80)
+}).strict()
+const artifactSelectionSchema = z.object({
+  slot: artifactSlotSchema,
+  partIndex: z.number().int().min(0).max(3),
+  id: z.string().trim().min(1).max(120),
+  refineLevel: z.number().int().min(0).max(100).optional(),
+  actualAffixes: buildStatValuesSchema(8).default([]),
+  gem: z.object({ id: z.string().trim().min(1).max(120) }).strict().optional()
+}).strict()
+const grimoireSelectionSchema = z.object({
+  slotIndex: z.number().int().min(0).max(2),
+  id: z.string().trim().min(1).max(120)
 }).strict()
 const ocrMatchLineSchema = z.object({
   id: z.string().trim().min(1).max(64).regex(/^[A-Za-z0-9_.:-]+$/),
@@ -101,6 +176,12 @@ const ocrMatchSchema = z.object({
   maxCandidates: z.number().int().min(1).max(5).default(5)
 }).strict()
 const hasUniqueSelectionIds = (items: Array<{ id: string }>) => new Set(items.map(item => canonical(item.id))).size === items.length
+const slotKeyEquipmentSelectionsAreValid = (items: Array<{ slotKey?: string }>): boolean => {
+  const usesSlotKeys = items.some(item => item.slotKey !== undefined)
+  if (!usesSlotKeys) return true
+  return items.every(item => item.slotKey !== undefined)
+    && new Set(items.map(item => item.slotKey)).size === items.length
+}
 const createBuildSchema = z.object({
   slug: z.string().trim().min(2).max(120).regex(/^[a-z0-9][a-z0-9-]*$/).optional(),
   title: z.string().trim().min(2).max(100),
@@ -109,10 +190,23 @@ const createBuildSchema = z.object({
   summary: z.string().trim().min(5).max(600),
   guide: z.array(z.string().trim().min(1).max(500)).max(20).default([]),
   tags: z.array(z.string().trim().min(1).max(30)).max(10).default([]),
+  snapshotVersion: z.literal(1).optional(),
+  character: characterSnapshotSchema.optional(),
   skills: z.array(buildSelectionSchema).min(1).max(8)
     .refine(hasUniqueSelectionIds, { message: 'Duplicate skill selection' }),
+  skillTree: z.array(skillTreeSelectionSchema).max(128)
+    .refine(items => new Set(items.map(item => `${item.kind}:${canonical(item.id)}`)).size === items.length, { message: 'Duplicate skill tree selection' })
+    .default([]),
   equipment: z.array(equipmentSelectionSchema).max(12)
-    .refine(hasUniqueSelectionIds, { message: 'Duplicate equipment selection' })
+    .refine(items => items.some(item => item.slotKey !== undefined) || hasUniqueSelectionIds(items), { message: 'Duplicate equipment selection' })
+    .refine(slotKeyEquipmentSelectionsAreValid, { message: 'Equipment must use either unique ids or a complete set of unique slot keys' })
+    .default([]),
+  artifacts: z.array(artifactSelectionSchema).max(4)
+    .refine(items => new Set(items.map(item => item.slot)).size === items.length, { message: 'Artifact slots must be unique' })
+    .default([]),
+  grimoires: z.array(grimoireSelectionSchema).max(3)
+    .refine(items => new Set(items.map(item => item.slotIndex)).size === items.length, { message: 'Grimoire slot indexes must be unique' })
+    .refine(hasUniqueSelectionIds, { message: 'Duplicate grimoire selection' })
     .default([]),
   createdBy: z.string().trim().min(1).max(50).default('local-user')
 }).strict()
@@ -198,6 +292,47 @@ function selectionMap<T extends { id: string; slug: string }>(items: T[]): Map<s
     map.set(canonical(item.slug), item)
   }
   return map
+}
+
+function runtimeSelectionMap(items: readonly unknown[]): Map<string, Record<string, unknown>> {
+  const map = new Map<string, Record<string, unknown>>()
+  for (const value of items) {
+    const item = asRecord(value)
+    for (const candidate of [readString(item.id), readString(item.slug)]) {
+      if (candidate) map.set(canonical(candidate), item)
+    }
+  }
+  return map
+}
+
+function catalogSnapshot(item: Record<string, unknown>) {
+  const id = readString(item.id) || 'unknown'
+  const name = asRecord(item.name)
+  const nameZh = readString(name.zh) || ''
+  const nameEn = readString(name.en) || ''
+  return {
+    id,
+    slug: readString(item.slug) || slugify(id),
+    name: nameEn || nameZh || readString(item.displayName) || id,
+    nameZh,
+    nameEn,
+    icon: readString(item.icon) || undefined
+  }
+}
+
+const weaponEquipTypes = new Set([
+  'Sword', 'Dagger', 'Wand', 'Spear', 'Axe', 'Mace', 'Book', 'Pistol', 'Bow',
+  'Scythe', 'Instrument', 'Twinblade', 'Mace2H', 'Sword2H', 'Axe2H', 'Spear2H',
+  'Wand2H', 'Rifle', 'Shotgun', 'Launcher', 'GatlingGun', 'Katar'
+].map(canonical))
+const directEquipClasses = new Map([
+  'Shield', 'Head', 'Legs', 'Feet', 'Chest', 'Accessory', 'Eyewear', 'Back', 'Grimoire'
+].map(value => [canonical(value), value]))
+
+function equipClassForType(type: string | null): string | null {
+  const key = canonical(type || '')
+  if (weaponEquipTypes.has(key)) return 'Weapon'
+  return directEquipClasses.get(key) || null
 }
 
 function recordsForCatalogKind(kind: RuntimeCatalogKind): { records: unknown[]; source: string; runtime: boolean } {
@@ -319,14 +454,23 @@ export async function buildApp(options: BuildAppOptions = {}) {
     ? listEquipment(equipmentIndex, { page: 1, pageSize: 100 }).items
     : equipmentIndex.map(entry => entry.item)
   const allArchetypes = listArchetypes(archetypeIndex, { page: 1, pageSize: 100 }).items
+  const skillPassiveRecords = runtimeRecordsForKind('skillPassives')
+  const artifactRecords = runtimeRecordsForKind('artifacts')
+  const gemRecords = runtimeRecordsForKind('gems')
+  const cardRecords = runtimeRecordsForKind('cards')
+  const activeSkillById = selectionMap(skillCatalog)
+  const passiveSkillById = runtimeSelectionMap(skillPassiveRecords)
+  const artifactById = runtimeSelectionMap(artifactRecords)
+  const gemById = runtimeSelectionMap(gemRecords)
+  const cardById = runtimeSelectionMap(cardRecords)
   const ocrCatalogMatcher = createOcrCatalogMatcher({
     archetype: options.ocrCatalogSources?.archetype ?? allArchetypes,
     skill: options.ocrCatalogSources?.skill ?? skillCatalog,
     equipment: options.ocrCatalogSources?.equipment ?? allEquipment,
-    skillPassive: options.ocrCatalogSources?.skillPassive ?? runtimeRecordsForKind('skillPassives'),
-    artifact: options.ocrCatalogSources?.artifact ?? runtimeRecordsForKind('artifacts'),
-    gem: options.ocrCatalogSources?.gem ?? runtimeRecordsForKind('gems'),
-    card: options.ocrCatalogSources?.card ?? runtimeRecordsForKind('cards')
+    skillPassive: options.ocrCatalogSources?.skillPassive ?? skillPassiveRecords,
+    artifact: options.ocrCatalogSources?.artifact ?? artifactRecords,
+    gem: options.ocrCatalogSources?.gem ?? gemRecords,
+    card: options.ocrCatalogSources?.card ?? cardRecords
   })
   const recommendedArchetypesBySkill = new Map<string, string[]>()
   for (const archetype of allArchetypes) {
@@ -421,6 +565,16 @@ export async function buildApp(options: BuildAppOptions = {}) {
     const archetype = findArchetype(archetypeIndex, input.archetype)
     if (!archetype) return reply.code(400).send({ error: 'Unknown archetype', code: 'UNKNOWN_ARCHETYPE', value: input.archetype })
 
+    const maxJobLevel = Number(archetype.maxJobLevel)
+    if (input.character?.jobLevel !== undefined && Number.isFinite(maxJobLevel) && input.character.jobLevel > maxJobLevel) {
+      return reply.code(400).send({
+        error: 'Job level exceeds the selected archetype limit',
+        code: 'CHARACTER_JOB_LEVEL_EXCEEDS_MAX',
+        value: input.character.jobLevel,
+        maxJobLevel
+      })
+    }
+
     const skillsById = selectionMap(skillCatalog)
     const equipmentById = selectionMap(allEquipment)
     const selectedSkills: SkillRecord[] = []
@@ -432,20 +586,173 @@ export async function buildApp(options: BuildAppOptions = {}) {
       }
       selectedSkills.push(skill)
     }
-    const selectedEquipment: Array<{ item: EquipmentRecord; slot?: string }> = []
+
+    const lineageIds = archetypeLineageIds(archetype.id)
+    const lineageById = new Map(lineageIds.map(id => [canonical(id), id]))
+    const selectedSkillTree: Array<Record<string, unknown>> = []
+    for (const selection of input.skillTree) {
+      const skill = selection.kind === 'active'
+        ? activeSkillById.get(canonical(selection.id))
+        : passiveSkillById.get(canonical(selection.id))
+      if (!skill) {
+        const oppositeKindExists = selection.kind === 'active'
+          ? passiveSkillById.has(canonical(selection.id))
+          : activeSkillById.has(canonical(selection.id))
+        return reply.code(400).send({
+          error: oppositeKindExists ? 'Skill exists in the opposite catalog kind' : `Unknown ${selection.kind} skill`,
+          code: oppositeKindExists
+            ? 'SKILL_KIND_MISMATCH'
+            : selection.kind === 'active' ? 'UNKNOWN_ACTIVE_SKILL' : 'UNKNOWN_PASSIVE_SKILL',
+          value: selection.id
+        })
+      }
+      // The extracted preview relation table is intentionally incomplete, so it
+      // cannot prove full skill ownership. We only constrain the selected tree
+      // to the class lineage and preserve that attribution as user-confirmed.
+      const treeArchetype = lineageById.get(canonical(selection.treeArchetype))
+      if (!treeArchetype) {
+        return reply.code(400).send({
+          error: 'Skill tree archetype is outside the selected archetype lineage',
+          code: 'SKILL_TREE_ARCHETYPE_MISMATCH',
+          value: selection.treeArchetype
+        })
+      }
+      const skillRecord = asRecord(skill)
+      const rawMaxLevel = Number(skillRecord.maxLevel)
+      const hasCatalogMaxLevel = Number.isInteger(rawMaxLevel) && rawMaxLevel >= 0
+      const maxLevel = hasCatalogMaxLevel ? rawMaxLevel : 0
+      if (hasCatalogMaxLevel && selection.level > maxLevel) {
+        return reply.code(400).send({
+          error: 'Skill level exceeds the catalog maximum',
+          code: 'SKILL_LEVEL_EXCEEDS_MAX',
+          value: selection.id,
+          level: selection.level,
+          maxLevel
+        })
+      }
+      const skillSnapshot = catalogSnapshot(skillRecord)
+      const passiveEquipment = selection.kind === 'passive' ? equipmentById.get(canonical(skillSnapshot.id)) : null
+      selectedSkillTree.push({
+        ...skillSnapshot,
+        icon: skillSnapshot.icon || passiveEquipment?.icon || undefined,
+        kind: selection.kind,
+        level: selection.level,
+        treeArchetype,
+        treeArchetypeSource: 'user-confirmed',
+        maxLevel
+      })
+    }
+
+    const selectedEquipment: Array<{
+      item: EquipmentRecord
+      selection: typeof input.equipment[number]
+      cards: Array<Record<string, unknown>>
+    }> = []
     for (const selection of input.equipment) {
       const item = equipmentById.get(canonical(selection.id))
       if (!item) return reply.code(400).send({ error: 'Unknown equipment', code: 'UNKNOWN_EQUIPMENT', value: selection.id })
       if (item.allowedArchetypes.length && !item.allowedArchetypes.some(value => inheritsArchetype(archetype.id, value))) {
         return reply.code(400).send({ error: 'Equipment is not available to this archetype', code: 'EQUIPMENT_ARCHETYPE_MISMATCH', value: selection.id })
       }
-      selectedEquipment.push({ item, slot: selection.slot })
+      // EquipConfig.slots is an unexplained source scalar, not the EquipSlot
+      // enum. Do not reinterpret it as a card-capacity rule without evidence.
+      const expectedCardClass = equipClassForType(item.type)
+      const cards: Array<Record<string, unknown>> = []
+      for (const cardSelection of selection.cards) {
+        const card = cardById.get(canonical(cardSelection.id))
+        if (!card) return reply.code(400).send({ error: 'Unknown card', code: 'UNKNOWN_CARD', value: cardSelection.id })
+        const equipClass = readString(card.equipClass) || ''
+        if (expectedCardClass && canonical(equipClass) !== canonical(expectedCardClass)) {
+          return reply.code(400).send({
+            error: 'Card is not compatible with this equipment type',
+            code: 'CARD_EQUIPMENT_CLASS_MISMATCH',
+            value: cardSelection.id,
+            equipment: item.id,
+            expectedEquipClass: expectedCardClass,
+            actualEquipClass: equipClass
+          })
+        }
+        cards.push({
+          ...catalogSnapshot(card),
+          slotIndex: cardSelection.slotIndex,
+          equipClass
+        })
+      }
+      selectedEquipment.push({ item, selection, cards })
+    }
+
+    const selectedArtifacts: Array<Record<string, unknown>> = []
+    for (const selection of input.artifacts) {
+      const artifact = artifactById.get(canonical(selection.id))
+      if (!artifact) return reply.code(400).send({ error: 'Unknown artifact', code: 'UNKNOWN_ARTIFACT', value: selection.id })
+      const parts = arrayOrEmpty(artifact.parts)
+      if (selection.partIndex >= parts.length) {
+        return reply.code(400).send({
+          error: 'Artifact part index is outside the catalog part list',
+          code: 'ARTIFACT_PART_INDEX_OUT_OF_RANGE',
+          value: selection.id,
+          partIndex: selection.partIndex,
+          partCount: parts.length
+        })
+      }
+      // ArtifactSlot and the four serialized part arrays are separate sources;
+      // keep the reviewed UI slot and part index without inventing a mapping.
+      let gemSnapshot: Record<string, unknown> | undefined
+      if (selection.gem) {
+        const gem = gemById.get(canonical(selection.gem.id))
+        if (!gem) return reply.code(400).send({ error: 'Unknown gem', code: 'UNKNOWN_GEM', value: selection.gem.id })
+        gemSnapshot = {
+          ...catalogSnapshot(gem),
+          affix: readString(gem.affix, gem.runtimeAffix) || undefined
+        }
+      }
+      selectedArtifacts.push({
+        ...catalogSnapshot(artifact),
+        slot: selection.slot,
+        partIndex: selection.partIndex,
+        partIcon: readString(asRecord(parts[selection.partIndex]).icon) || undefined,
+        refineLevel: selection.refineLevel,
+        actualAffixes: selection.actualAffixes,
+        gem: gemSnapshot
+      })
+    }
+
+    const selectedGrimoires: Array<Record<string, unknown>> = []
+    for (const selection of input.grimoires) {
+      const item = equipmentById.get(canonical(selection.id))
+      const passive = item ? passiveSkillById.get(canonical(item.id)) : null
+      if (!item || canonical(item.type || '') !== canonical('Grimoire') || !passive) {
+        return reply.code(400).send({ error: 'Unknown grimoire', code: 'UNKNOWN_GRIMOIRE', value: selection.id })
+      }
+      if (item.allowedArchetypes.length && !item.allowedArchetypes.some(value => inheritsArchetype(archetype.id, value))) {
+        return reply.code(400).send({
+          error: 'Grimoire is not available to this archetype',
+          code: 'GRIMOIRE_ARCHETYPE_MISMATCH',
+          value: selection.id
+        })
+      }
+      selectedGrimoires.push({
+        ...catalogSnapshot(asRecord(item)),
+        slotIndex: selection.slotIndex
+      })
     }
 
     const existing = await listBuilds()
     const archetypeTemplate = existing.map(asRecord).find(build => canonical(readString(build.archetype) || '') === canonical(archetype.id))
+    const hasRichSnapshot = Boolean(input.character)
+      || input.skillTree.length > 0
+      || input.artifacts.length > 0
+      || input.grimoires.length > 0
+      || input.equipment.some(selection => Boolean(
+        selection.slotKey
+        || selection.refineLevel !== undefined
+        || selection.potential !== undefined
+        || selection.actualAffixes.length
+        || selection.cards.length
+      ))
     const created = await createBuild({
       ...input,
+      snapshotVersion: input.snapshotVersion ?? (hasRichSnapshot ? 1 : undefined),
       archetype: archetype.id,
       archetypeZh: archetype.name.zh,
       color: readString(archetypeTemplate?.color) || '#668f7a',
@@ -458,15 +765,23 @@ export async function buildApp(options: BuildAppOptions = {}) {
         nameEn: skill.name.en,
         icon: skill.icon || undefined
       })),
-      equipment: selectedEquipment.map(({ item, slot }) => ({
+      skillTree: selectedSkillTree,
+      equipment: selectedEquipment.map(({ item, selection, cards }) => ({
         id: item.id,
         slug: item.slug,
         name: item.name.en || item.name.zh,
         nameZh: item.name.zh,
         nameEn: item.name.en,
-        slot: slot || item.slot || item.categoryLabel.zh,
-        icon: item.icon || undefined
-      }))
+        slot: selection.slot || item.slot || item.categoryLabel.zh,
+        slotKey: selection.slotKey,
+        icon: item.icon || undefined,
+        refineLevel: selection.refineLevel,
+        potential: selection.potential,
+        actualAffixes: selection.actualAffixes,
+        cards
+      })),
+      artifacts: selectedArtifacts,
+      grimoires: selectedGrimoires
     })
     return reply.code(201).send(created)
   })

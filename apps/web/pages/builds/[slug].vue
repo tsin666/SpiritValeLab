@@ -23,6 +23,7 @@ const buildClass = computed(() => locale.value.startsWith('en') ? build.value?.a
 const title = computed(() => buildTitle(build.value))
 const summary = computed(() => buildSummary(build.value))
 const guide = computed(() => buildGuide(build.value))
+const guideHtml = computed(() => build.value?.guideHtml || '')
 const tags = computed(() => buildTags(build.value))
 const rankScore = computed(() => engagement.likes * 5 + engagement.views)
 const classInitials = computed(() => String(buildClass.value || 'BD').slice(0, 2).toLocaleUpperCase(locale.value))
@@ -188,7 +189,9 @@ useSeoMeta({ title: () => title.value || t('builds.seoTitle'), description: () =
           <div v-for="skill in build.skills.filter(entry => !entry.slug)" :key="skill.id"><img v-if="skill.icon" :src="skill.icon" :alt="skillName(skill)"><span>{{ skillName(skill) }}</span></div>
         </div>
         <h2>{{ t('builds.guide') }}</h2>
-        <ol><li v-for="step in guide" :key="step">{{ step }}</li></ol>
+        <div v-if="guideHtml" class="build-rich-text" v-html="guideHtml"/>
+        <ol v-else-if="guide.length"><li v-for="(step, index) in guide" :key="`${index}-${step}`">{{ step }}</li></ol>
+        <p v-else class="build-rich-text__empty">{{ t('builds.guideEmpty') }}</p>
       </section>
       <aside>
         <h2>{{ t('builds.equipment') }}</h2>
@@ -202,3 +205,18 @@ useSeoMeta({ title: () => title.value || t('builds.seoTitle'), description: () =
     </div>
   </main>
 </template>
+
+<style scoped>
+.build-rich-text { color:#49635f; font-size:12px; line-height:1.8; overflow-wrap:anywhere; }
+.build-rich-text :deep(h2),.build-rich-text :deep(h3) { color:#173f3b; line-height:1.3; }
+.build-rich-text :deep(h2) { margin:22px 0 9px; font-size:20px; }
+.build-rich-text :deep(h3) { margin:18px 0 8px; font-size:16px; }
+.build-rich-text :deep(p) { margin:8px 0; }
+.build-rich-text :deep(ul),.build-rich-text :deep(ol) { padding-left:24px; }
+.build-rich-text :deep(blockquote) { margin:14px 0; padding:10px 14px; border-left:3px solid #2aa28f; border-radius:0 8px 8px 0; color:#58716d; background:#eef7f3; }
+.build-rich-text :deep(pre) { max-width:100%; padding:13px; overflow:auto; border-radius:10px; color:#dff8f1; background:#123d3a; font:10px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace; }
+.build-rich-text :deep(code) { padding:2px 4px; border-radius:4px; color:#0b7065; background:#e7f3ef; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; }
+.build-rich-text :deep(pre code) { padding:0; color:inherit; background:transparent; }
+.build-rich-text :deep(a) { color:#0a8173; text-decoration:underline; text-underline-offset:2px; }
+.build-rich-text__empty { margin:0; color:#899793; font-size:11px; }
+</style>

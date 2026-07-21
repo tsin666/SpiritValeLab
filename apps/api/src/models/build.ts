@@ -1,5 +1,6 @@
 import mongoose, { Schema } from 'mongoose'
 import { ArtifactSlot, StanceType, StatType } from '../runtime-data.js'
+import { guideHtmlTextLength, MAX_GUIDE_TEXT_LENGTH, normalizeGuideHtml } from '../guide-html.js'
 
 const childSchemaOptions = { _id: false, strict: true } as const
 
@@ -125,6 +126,11 @@ const buildSchema = new Schema({
   summary: String,
   summaryEn: String,
   guide: [String],
+  guideHtml: {
+    type: String,
+    set: (value: unknown) => typeof value === 'string' ? normalizeGuideHtml(value) : undefined,
+    validate: (value: string | undefined) => !value || guideHtmlTextLength(value) <= MAX_GUIDE_TEXT_LENGTH
+  },
   guideEn: [String],
   tags: [String],
   tagsEn: [String],

@@ -48,6 +48,7 @@ import {
   type RuntimeCatalogKind
 } from './runtime-data.js'
 import { createOcrCatalogMatcher, ocrCatalogKinds, type OcrCatalogSources } from './ocr/catalog-matcher.js'
+import { guideHtmlTextLength, MAX_GUIDE_TEXT_LENGTH, sanitizeGuideHtml } from './guide-html.js'
 
 const catalogKinds = runtimeCatalogKinds
 const searchSchema = z.object({
@@ -182,6 +183,12 @@ const slotKeyEquipmentSelectionsAreValid = (items: Array<{ slotKey?: string }>):
   return items.every(item => item.slotKey !== undefined)
     && new Set(items.map(item => item.slotKey)).size === items.length
 }
+const guideHtmlSchema = z.string()
+  .transform(sanitizeGuideHtml)
+  .refine(value => guideHtmlTextLength(value) <= MAX_GUIDE_TEXT_LENGTH, {
+    message: `Guide rich text must contain at most ${MAX_GUIDE_TEXT_LENGTH} characters`
+  })
+  .transform(value => guideHtmlTextLength(value) > 0 ? value : undefined)
 const createBuildSchema = z.object({
   slug: z.string().trim().min(2).max(120).regex(/^[a-z0-9][a-z0-9-]*$/).optional(),
   title: z.string().trim().min(2).max(100),
@@ -189,6 +196,7 @@ const createBuildSchema = z.object({
   difficulty: z.enum(['入门', '进阶', '专家']),
   summary: z.string().trim().min(5).max(600),
   guide: z.array(z.string().trim().min(1).max(500)).max(20).default([]),
+  guideHtml: guideHtmlSchema.optional(),
   tags: z.array(z.string().trim().min(1).max(30)).max(10).default([]),
   snapshotVersion: z.literal(1).optional(),
   character: characterSnapshotSchema.optional(),

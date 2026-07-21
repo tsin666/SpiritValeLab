@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 import { BuildModel } from './models/build.js'
 import { slugify } from './catalog-utils.js'
 import { setTimeout as delay } from 'node:timers/promises'
+import { guideHtmlTextLength, MAX_GUIDE_TEXT_LENGTH, normalizeGuideHtml } from './guide-html.js'
 
 let mongoReady = false
 let redis: Redis | null = null
@@ -19,8 +20,12 @@ const buildsCacheKey = 'spiritvale:builds:v2'
 const legacyDemoBuildSlugs = ['paladin-aegis-v1', 'wizard-meteor-v1', 'ranger-storm-v1', 'assassin-shadow-v1']
 
 function publicBuild(value: StoredBuild | Record<string, unknown>) {
-  const { viewedBy: _viewedBy, likedBy: _likedBy, ...record } = value as StoredBuild
-  return record
+  const { viewedBy: _viewedBy, likedBy: _likedBy, guideHtml, ...record } = value as StoredBuild
+  const normalizedGuideHtml = typeof guideHtml === 'string' ? normalizeGuideHtml(guideHtml) : undefined
+  const safeGuideHtml = normalizedGuideHtml && guideHtmlTextLength(normalizedGuideHtml) <= MAX_GUIDE_TEXT_LENGTH
+    ? normalizedGuideHtml
+    : undefined
+  return { ...record, ...(safeGuideHtml ? { guideHtml: safeGuideHtml } : {}) }
 }
 
 function visitorFingerprint(visitorId: string) {
@@ -97,21 +102,25 @@ export async function listBuilds() {
   if (cached) {
     try {
       const parsed: unknown = JSON.parse(cached)
-      if (Array.isArray(parsed)) return parsed
+      if (Array.isArray(parsed)) return parsed.map(value => publicBuild(value as Record<string, unknown>))
       await redis?.del(buildsCacheKey).catch(() => undefined)
     } catch {
       await redis?.del(buildsCacheKey).catch(() => undefined)
     }
   }
   const result = mongoReady
-    ? await BuildModel.find({ active: { $ne: false } }).select('-viewedBy -likedBy').sort({ createdAt: -1 }).lean()
+    ? (await BuildModel.find({ active: { $ne: false } }).select('-viewedBy -likedBy').sort({ createdAt: -1 }).lean())
+      .map(value => publicBuild(value as unknown as Record<string, unknown>))
     : fallbackUserBuilds.map(publicBuild)
   await redis?.set(buildsCacheKey, JSON.stringify(result), 'EX', 120).catch(() => undefined)
   return result
 }
 
 export async function getBuild(slug: string) {
-  if (mongoReady) return BuildModel.findOne({ slug, active: { $ne: false } }).select('-viewedBy -likedBy').lean()
+  if (mongoReady) {
+    const build = await BuildModel.findOne({ slug, active: { $ne: false } }).select('-viewedBy -likedBy').lean()
+    return build ? publicBuild(build as unknown as Record<string, unknown>) : null
+  }
   const build = fallbackUserBuilds.find(record => record.slug === slug)
   return build ? publicBuild(build) : null
 }

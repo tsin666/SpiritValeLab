@@ -8,9 +8,8 @@ const { t, locale } = useI18n()
 const { gameText, difficultyText, categoryText, slotText, typeText, statText } = useGameLocale()
 const localePath = useLocalePath()
 const maxTags = 10
-const maxGuideSteps = 20
 const maxTagLength = 30
-const maxGuideStepLength = 500
+const maxGuideLength = 10_000
 
 const { data: options, status, error, refresh } = await useFetch<BuilderOptions>(`${api}/api/builder/options`, {
   default: () => ({
@@ -30,7 +29,8 @@ const archetype = ref('')
 const difficulty = ref('入门')
 const summary = ref('')
 const tagsInput = ref('')
-const guideInput = ref('')
+const guideHtml = ref('')
+const guideTextLength = ref(0)
 const selectedSkills = ref<string[]>([])
 const selectedEquipment = ref<string[]>([])
 const skillSearch = ref('')
@@ -69,15 +69,13 @@ const equipmentById = computed(() => {
 })
 const selectedEquipmentItems = computed(() => selectedEquipment.value.map(id => equipmentById.value.get(id)).filter(Boolean) as Equipment[])
 const tags = computed(() => [...new Set(tagsInput.value.split(/[,，\n]/).map(value => value.trim()).filter(Boolean))])
-const guide = computed(() => guideInput.value.split('\n').map(value => value.trim()).filter(Boolean))
 const tagsValidationError = computed(() => {
   if (tags.value.length > maxTags) return t('builder.tagsTooMany', { max: maxTags })
   if (tags.value.some(value => value.length > maxTagLength)) return t('builder.tagTooLong', { max: maxTagLength })
   return ''
 })
 const guideValidationError = computed(() => {
-  if (guide.value.length > maxGuideSteps) return t('builder.guideTooMany', { max: maxGuideSteps })
-  if (guide.value.some(value => value.length > maxGuideStepLength)) return t('builder.guideStepTooLong', { max: maxGuideStepLength })
+  if (guideTextLength.value > maxGuideLength) return t('builder.guideContentTooLong', { max: maxGuideLength })
   return ''
 })
 
@@ -291,7 +289,8 @@ async function submitBuild() {
         archetype: selectedArchetype.value?.id || archetype.value,
         difficulty: difficulty.value,
         summary: summary.value.trim(),
-        guide: guide.value,
+        guide: [],
+        ...(guideTextLength.value ? { guideHtml: guideHtml.value } : {}),
         tags: tags.value,
         skills: selectedSkills.value.map(id => ({ id })),
         equipment: selectedEquipmentItems.value.map(item => ({ id: item.id, ...(item.slot ? { slot: item.slot } : {}) }))
@@ -331,7 +330,7 @@ useSeoMeta({ title: () => t('builder.seoTitle'), description: () => t('builder.s
             <label class="builder-field"><span>{{ t('builder.difficulty') }} <b>*</b></span><select v-model="difficulty"><option v-for="level in options.difficulties" :key="level" :value="level">{{ difficultyText(level) }}</option></select></label>
             <label class="builder-field builder-field--wide"><span>{{ t('builder.summary') }} <b>*</b></span><textarea v-model="summary" maxlength="600" rows="4" :placeholder="t('builder.summaryPlaceholder')"></textarea><small :class="{ valid: validation.summary }">{{ t('builder.minChars', { min: 5, count: summary.length, max: 600 }) }}</small></label>
             <label class="builder-field"><span>{{ t('builder.tags') }}</span><input v-model="tagsInput" :placeholder="t('builder.tagsPlaceholder')"><small :class="{ valid: validation.tags, invalid: !validation.tags }">{{ t('builder.tagCount', { count: tags.length, max: maxTags }) }}<template v-if="tagsValidationError"> · {{ tagsValidationError }}</template></small></label>
-            <label class="builder-field"><span>{{ t('builder.guideSteps') }}</span><textarea v-model="guideInput" rows="3" :placeholder="t('builder.guidePlaceholder')"></textarea><small :class="{ valid: validation.guide, invalid: !validation.guide }">{{ t('builder.stepCount', { count: guide.length, max: maxGuideSteps }) }}<template v-if="guideValidationError"> · {{ guideValidationError }}</template></small></label>
+            <div class="builder-field builder-field--wide"><span>{{ t('builder.guideSteps') }}</span><RichTextEditor v-model="guideHtml" :max-length="maxGuideLength" :aria-label="t('builder.guideSteps')" :placeholder="t('builder.guidePlaceholder')" @update:text-length="guideTextLength = $event"/><small :class="{ valid: validation.guide, invalid: !validation.guide }"><template v-if="guideValidationError">{{ guideValidationError }}</template></small></div>
           </div>
         </section>
 

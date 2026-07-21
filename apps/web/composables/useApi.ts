@@ -127,6 +127,7 @@ export type Build = {
   summary: string
   summaryEn?: string
   guide: string[]
+  guideHtml?: string
   guideEn?: string[]
   tags: string[]
   tagsEn?: string[]

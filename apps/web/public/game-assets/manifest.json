@@ -1,0 +1,244 @@
+{
+  "source": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\SpiritVale\\SpiritVale_Data\\sharedassets0.assets",
+  "assets": {
+    "3-Aegis": {
+      "file": "3-aegis.png",
+      "type": "Texture2D",
+      "width": 512,
+      "height": 512,
+      "pathId": 1291
+    },
+    "49-HolyLight": {
+      "file": "49-holylight.png",
+      "type": "Texture2D",
+      "width": 512,
+      "height": 512,
+      "pathId": 1409
+    },
+    "T_Artifact_HolyVow": {
+      "file": "t_artifact_holyvow.png",
+      "type": "Texture2D",
+      "width": 2048,
+      "height": 2048,
+      "pathId": 1642
+    },
+    "Poison_Slash": {
+      "file": "poison_slash.png",
+      "type": "Texture2D",
+      "width": 512,
+      "height": 512,
+      "pathId": 1954
+    },
+    "T_Sword_FrostMoon": {
+      "file": "t_sword_frostmoon.png",
+      "type": "Texture2D",
+      "width": 1024,
+      "height": 1024,
+      "pathId": 1994
+    },
+    "24-ShieldThrow": {
+      "file": "24-shieldthrow.png",
+      "type": "Texture2D",
+      "width": 512,
+      "height": 512,
+      "pathId": 2001
+    },
+    "Skill_Lightning": {
+      "file": "skill_lightning.png",
+      "type": "Texture2D",
+      "width": 512,
+      "height": 512,
+      "pathId": 2091
+    },
+    "Skill_Precision-Strike": {
+      "file": "skill_precision-strike.png",
+      "type": "Texture2D",
+      "width": 512,
+      "height": 512,
+      "pathId": 2217
+    },
+    "Skill_Heaven": {
+      "file": "skill_heaven.png",
+      "type": "Texture2D",
+      "width": 512,
+      "height": 512,
+      "pathId": 2274
+    },
+    "T_Artifact_Stormquiver": {
+      "file": "t_artifact_stormquiver.png",
+      "type": "Texture2D",
+      "width": 2048,
+      "height": 2048,
+      "pathId": 2338
+    },
+    "class-summoner": {
+      "file": "class-summoner.png",
+      "type": "Texture2D",
+      "width": 128,
+      "height": 128,
+      "pathId": 2373
+    },
+    "Skill_Meteor": {
+      "file": "skill_meteor.png",
+      "type": "Texture2D",
+      "width": 512,
+      "height": 512,
+      "pathId": 2407
+    },
+    "T_Staff_MeteoricStaff": {
+      "file": "t_staff_meteoricstaff.png",
+      "type": "Texture2D",
+      "width": 1024,
+      "height": 1024,
+      "pathId": 2673
+    },
+    "class-acolyte": {
+      "file": "class-acolyte.png",
+      "type": "Texture2D",
+      "width": 128,
+      "height": 128,
+      "pathId": 2750
+    },
+    "33-HolyShield": {
+      "file": "33-holyshield.png",
+      "type": "Texture2D",
+      "width": 512,
+      "height": 512,
+      "pathId": 2959
+    },
+    "T_Shield_HolyShield": {
+      "file": "t_shield_holyshield.png",
+      "type": "Texture2D",
+      "width": 1024,
+      "height": 1024,
+      "pathId": 2996
+    },
+    "31-HolyWrath": {
+      "file": "31-holywrath.png",
+      "type": "Texture2D",
+      "width": 512,
+      "height": 512,
+      "pathId": 3396
+    },
+    "class-rogue": {
+      "file": "class-rogue.png",
+      "type": "Texture2D",
+      "width": 128,
+      "height": 128,
+      "pathId": 3465
+    },
+    "T_Artifact_Starfire": {
+      "file": "t_artifact_starfire.png",
+      "type": "Texture2D",
+      "width": 2048,
+      "height": 2048,
+      "pathId": 3481
+    },
+    "Skill_Heal": {
+      "file": "skill_heal.png",
+      "type": "Texture2D",
+      "width": 512,
+      "height": 512,
+      "pathId": 3587
+    },
+    "Skill_Ice": {
+      "file": "skill_ice.png",
+      "type": "Texture2D",
+      "width": 512,
+      "height": 512,
+      "pathId": 3730
+    },
+    "Skill_Blackhole": {
+      "file": "skill_blackhole.png",
+      "type": "Texture2D",
+      "width": 512,
+      "height": 512,
+      "pathId": 3876
+    },
+    "class-knight": {
+      "file": "class-knight.png",
+      "type": "Texture2D",
+      "width": 128,
+      "height": 128,
+      "pathId": 3931
+    },
+    "Skill_Starlight": {
+      "file": "skill_starlight.png",
+      "type": "Texture2D",
+      "width": 512,
+      "height": 512,
+      "pathId": 3954
+    },
+    "class-paladin-2": {
+      "file": "class-paladin-2.png",
+      "type": "Texture2D",
+      "width": 128,
+      "height": 128,
+      "pathId": 3963
+    },
+    "Skill_Storm": {
+      "file": "skill_storm.png",
+      "type": "Texture2D",
+      "width": 512,
+      "height": 512,
+      "pathId": 4415
+    },
+    "T_Axe_RageboundFury": {
+      "file": "t_axe_rageboundfury.png",
+      "type": "Texture2D",
+      "width": 1024,
+      "height": 1024,
+      "pathId": 4534
+    },
+    "Skill_Time": {
+      "file": "skill_time.png",
+      "type": "Texture2D",
+      "width": 512,
+      "height": 512,
+      "pathId": 4553
+    },
+    "class-scout": {
+      "file": "class-scout.png",
+      "type": "Texture2D",
+      "width": 128,
+      "height": 128,
+      "pathId": 4666
+    },
+    "Skill_Spear": {
+      "file": "skill_spear.png",
+      "type": "Texture2D",
+      "width": 512,
+      "height": 512,
+      "pathId": 4714
+    },
+    "class-berserker-2": {
+      "file": "class-berserker-2.png",
+      "type": "Texture2D",
+      "width": 128,
+      "height": 128,
+      "pathId": 4783
+    },
+    "class-warrior": {
+      "file": "class-warrior.png",
+      "type": "Texture2D",
+      "width": 128,
+      "height": 128,
+      "pathId": 4827
+    },
+    "class-mage": {
+      "file": "class-mage.png",
+      "type": "Texture2D",
+      "width": 128,
+      "height": 128,
+      "pathId": 4836
+    },
+    "Skill_Wind_Blast": {
+      "file": "skill_wind_blast.png",
+      "type": "Texture2D",
+      "width": 512,
+      "height": 512,
+      "pathId": 4876
+    }
+  },
+  "missing": []
+}

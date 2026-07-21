@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "source": "Installed GameAssembly.dll Formula.GetRequiredClass native jump table",
+    "method": "Formula.GetRequiredClass",
+    "rva": "0x947430",
+    "jumpTableRva": "0x94747C",
+    "gameAssemblySha256": "E96637D13174209BA27895DD89F688D29AC07B3EF1DB0F978EE1A45CA9386113",
+    "advancementJobLevel": 50,
+    "advancementJobLevelSource": "Formula.RequiredAdvanceJobLevel initialized to 50 by Formula..cctor",
+    "nativeAdvancedValueRange": [10, 30],
+    "fallbackRequiredClass": "Novice"
+  },
+  "baseArchetypes": [
+    "Acolyte",
+    "Knight",
+    "Mage",
+    "Rogue",
+    "Scout",
+    "Summoner",
+    "Warrior"
+  ],
+  "requiredClassByArchetype": {
+    "Paladin": "Knight",
+    "DragonKnight": "Knight",
+    "Berserker": "Warrior",
+    "Revenant": "Knight",
+    "Priest": "Acolyte",
+    "Monk": "Acolyte",
+    "Wizard": "Mage",
+    "Chronomancer": "Mage",
+    "Druid": "Summoner",
+    "Warlock": "Acolyte",
+    "Assassin": "Rogue",
+    "Shinobi": "Rogue",
+    "Gunslinger": "Scout",
+    "Ranger": "Scout",
+    "Jester": "Scout",
+    "Nightshade": "Rogue",
+    "Necromancer": "Summoner",
+    "Spellblade": "Mage",
+    "BladeMaster": "Warrior",
+    "Mechanist": "Warrior",
+    "Alchemist": "Summoner"
+  },
+  "specialArchetypes": ["Weaver"],
+  "professionArchetypes": [
+    "Artificer",
+    "Blacksmith",
+    "Cardweaver",
+    "Craftsman",
+    "Gemsmith",
+    "Merchant",
+    "Stylist"
+  ]
+}

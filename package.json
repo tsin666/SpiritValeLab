@@ -1,0 +1,29 @@
+{
+  "name": "spiritvale-lab",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @spiritvale/web",
+    "dev:web": "npm run dev -w @spiritvale/web",
+    "dev:api": "npm run dev -w @spiritvale/api",
+    "build": "npm run build -w @spiritvale/api && npm run build -w @spiritvale/web",
+    "start:api": "node apps/api/dist/server.js",
+    "start:web": "node apps/web/.output/server/index.mjs",
+    "pm2:start": "pm2 start ecosystem.config.cjs --update-env",
+    "pm2:reload": "pm2 reload ecosystem.config.cjs --update-env",
+    "pm2:stop": "pm2 stop ecosystem.config.cjs",
+    "pm2:logs": "pm2 logs",
+    "pm2:status": "pm2 status",
+    "typecheck": "npm run typecheck -w @spiritvale/api",
+    "test:api": "npm test -w @spiritvale/api",
+    "verify:api": "npm run verify -w @spiritvale/api",
+    "verify:data": "node scripts/verify-game-data.mjs",
+    "verify:runtime": "node scripts/verify-runtime.mjs"
+  },
+  "devDependencies": {
+    "pm2": "^7.0.3"
+  }
+}

@@ -1,0 +1,2080 @@
+{
+  "meta": {
+    "source": "Cpp2IL diffable-cs declarations recovered from the local SpiritVale IL2CPP build",
+    "cpp2ilVersion": "2022.1.0-pre-release.21",
+    "cpp2ilExecutableSha256": "663fb432433b4371fd1ee0ebc321a8fff2a9aac5ac4230c843f9e03ddee4e04c",
+    "unityVersion": "6000.0.64f1",
+    "sourceFiles": [
+      {
+        "path": "Assembly-CSharp/EquipType.cs",
+        "sha256": "9159185cc0fbe34a1ddddcffb462859f4fc154dc55e8dec46bd93028a7c28dac"
+      },
+      {
+        "path": "Assembly-CSharp/EquipSlot.cs",
+        "sha256": "0c28b3461ce5c41677ef6f74dc51543ea7297a3d867f2a552369e8cc99d1d953"
+      },
+      {
+        "path": "Assembly-CSharp/Element.cs",
+        "sha256": "944d4e595be9683c7ba02ec145a498edc4e1f7be5a276d3d71debb35dd3e22f3"
+      },
+      {
+        "path": "Assembly-CSharp/Archetype.cs",
+        "sha256": "d73ef0408ba1bc8edecdb86de0a25f0e06b5100cabee6e24c4d60bbfddab1b1e"
+      },
+      {
+        "path": "Assembly-CSharp/StatType.cs",
+        "sha256": "dff766d873d4e10d9e35ee54f76e31365df22d89364ead56470ff5702761e142"
+      },
+      {
+        "path": "Assembly-CSharp/SkillEventType.cs",
+        "sha256": "465644aceb3a69abbf357338fa1782d277e24ba9d4b0cea6bf66aad68bb0ee80"
+      },
+      {
+        "path": "Assembly-CSharp/SkillConditionType.cs",
+        "sha256": "01a9fc0b68829f4bbd82a1eefc5fd79e49a62139dc0ac865149facdfb79af022"
+      },
+      {
+        "path": "Assembly-CSharp/SkillTriggerType.cs",
+        "sha256": "068c60ddb1cff7b9a0a379cbf6ca10f3ea47b0d5fdfd56a587da753a122ab5e6"
+      },
+      {
+        "path": "Assembly-CSharp/TargetType.cs",
+        "sha256": "4ed65e6e16398b38f215ec7bb3fe0e196541e1eb393a942b13c201e03434c0e5"
+      },
+      {
+        "path": "Assembly-CSharp/ItemRarity.cs",
+        "sha256": "3577e83f676a7c677af372b0751638e26e75efb88dc439fbba079b945c567857"
+      },
+      {
+        "path": "Assembly-CSharp/StanceType.cs",
+        "sha256": "0493abbcc46d59e04f93bea3d81c91173463f0043d616316dbf8379d2bbc050a"
+      },
+      {
+        "path": "Assembly-CSharp/ECProjectileType.cs",
+        "sha256": "70336d2070da8379da91dc024bf177132452cfa69bd929b05a51533f51b2b027"
+      },
+      {
+        "path": "Assembly-CSharp/DamageType.cs",
+        "sha256": "b98557b361d0298cb36876416accae91e5c307b17d3cbffb492e24d9594b9ddd"
+      },
+      {
+        "path": "Assembly-CSharp/CastType.cs",
+        "sha256": "4d0853771ceb64edb627f3b6d46757666af7e63b7a75239f845ae629083305a5"
+      },
+      {
+        "path": "Assembly-CSharp/CastIndicatorShape.cs",
+        "sha256": "46ad5d8ffc4f0984851f09561622c3d3d1deb8811427c22e38ea614df91e7704"
+      },
+      {
+        "path": "Assembly-CSharp/LeapType.cs",
+        "sha256": "d741fe7b7885e2c27ed138016e4acbeae2dcdb543d56dd51283d118619234614"
+      },
+      {
+        "path": "Assembly-CSharp/SkillCategory.cs",
+        "sha256": "a31b617ce0a763f8f7d4976ff8ec9f81c8634ffecfef9575105470520ee0e9dd"
+      },
+      {
+        "path": "Assembly-CSharp/EquipClass.cs",
+        "sha256": "ee28f170783f946cbe9354588c4a154c196c05de61ef5f0ed13bc4bf1ba43a8e"
+      },
+      {
+        "path": "Assembly-CSharp/Race.cs",
+        "sha256": "3b0020e286f3f1a55e58309198597026177e407396dfa58a5df58d5ae6d96a2e"
+      },
+      {
+        "path": "Assembly-CSharp/Size.cs",
+        "sha256": "b00365ee985551a4476efb1701a9f8c0d0f5c40320347cdd4483d74b308af8c3"
+      },
+      {
+        "path": "Assembly-CSharp/StatusCategory.cs",
+        "sha256": "e899b97b5e397d9b27c54e1918dbcddd2943f6e0543a6bb8bb1dbd8ee796dd2a"
+      },
+      {
+        "path": "Assembly-CSharp/StatusEffectFlag.cs",
+        "sha256": "0b46a09364914baf7175d0b5ec669f8a66170190b47d702075b10cc65ebc7b5b"
+      },
+      {
+        "path": "Assembly-CSharp/ArtifactSlot.cs",
+        "sha256": "143706f439392e04d640f545d12fd01bec76cc0ce88538d04f0ea55565b8e2be"
+      },
+      {
+        "path": "Assembly-CSharp/Formula.cs",
+        "sha256": "eae17fd38c60de4b04b1c076a197131f5634007c42d9daba8f96086c85bbc1bb"
+      }
+    ]
+  },
+  "enums": {
+    "EquipType": [
+      {
+        "name": "Sword",
+        "value": 0
+      },
+      {
+        "name": "Dagger",
+        "value": 1
+      },
+      {
+        "name": "Wand",
+        "value": 2
+      },
+      {
+        "name": "Spear",
+        "value": 3
+      },
+      {
+        "name": "Axe",
+        "value": 4
+      },
+      {
+        "name": "Mace",
+        "value": 5
+      },
+      {
+        "name": "Book",
+        "value": 6
+      },
+      {
+        "name": "Pistol",
+        "value": 7
+      },
+      {
+        "name": "Bow",
+        "value": 8
+      },
+      {
+        "name": "Scythe",
+        "value": 9
+      },
+      {
+        "name": "Instrument",
+        "value": 10
+      },
+      {
+        "name": "Twinblade",
+        "value": 11
+      },
+      {
+        "name": "Mace2H",
+        "value": 12
+      },
+      {
+        "name": "Sword2H",
+        "value": 13
+      },
+      {
+        "name": "Axe2H",
+        "value": 14
+      },
+      {
+        "name": "Spear2H",
+        "value": 15
+      },
+      {
+        "name": "Wand2H",
+        "value": 16
+      },
+      {
+        "name": "Shield",
+        "value": 17
+      },
+      {
+        "name": "Head",
+        "value": 18
+      },
+      {
+        "name": "Legs",
+        "value": 19
+      },
+      {
+        "name": "Feet",
+        "value": 20
+      },
+      {
+        "name": "Chest",
+        "value": 21
+      },
+      {
+        "name": "Accessory",
+        "value": 22
+      },
+      {
+        "name": "Eyewear",
+        "value": 23
+      },
+      {
+        "name": "Back",
+        "value": 24
+      },
+      {
+        "name": "Rifle",
+        "value": 25
+      },
+      {
+        "name": "Shotgun",
+        "value": 26
+      },
+      {
+        "name": "Launcher",
+        "value": 27
+      },
+      {
+        "name": "GatlingGun",
+        "value": 28
+      },
+      {
+        "name": "Katar",
+        "value": 29
+      },
+      {
+        "name": "Grimoire",
+        "value": 30
+      },
+      {
+        "name": "None",
+        "value": -1
+      },
+      {
+        "name": "Invalid",
+        "value": -2
+      }
+    ],
+    "EquipSlot": [
+      {
+        "name": "Mainhand",
+        "value": 0
+      },
+      {
+        "name": "Offhand",
+        "value": 1
+      },
+      {
+        "name": "Head",
+        "value": 2
+      },
+      {
+        "name": "Legs",
+        "value": 3
+      },
+      {
+        "name": "Feet",
+        "value": 4
+      },
+      {
+        "name": "Chest",
+        "value": 5
+      },
+      {
+        "name": "AccessoryLeft",
+        "value": 6
+      },
+      {
+        "name": "AccessoryRight",
+        "value": 7
+      },
+      {
+        "name": "Eyewear",
+        "value": 8
+      },
+      {
+        "name": "Back",
+        "value": 9
+      },
+      {
+        "name": "None",
+        "value": -1
+      }
+    ],
+    "Element": [
+      {
+        "name": "Neutral",
+        "value": 0
+      },
+      {
+        "name": "Poison",
+        "value": 1
+      },
+      {
+        "name": "Shadow",
+        "value": 2
+      },
+      {
+        "name": "Holy",
+        "value": 3
+      },
+      {
+        "name": "Fire",
+        "value": 4
+      },
+      {
+        "name": "Water",
+        "value": 5
+      },
+      {
+        "name": "Wind",
+        "value": 6
+      },
+      {
+        "name": "Earth",
+        "value": 7
+      },
+      {
+        "name": "Undead",
+        "value": 8
+      },
+      {
+        "name": "Ghost",
+        "value": 9
+      }
+    ],
+    "Archetype": [
+      {
+        "name": "Novice",
+        "value": -1
+      },
+      {
+        "name": "Warrior",
+        "value": 0
+      },
+      {
+        "name": "Mage",
+        "value": 1
+      },
+      {
+        "name": "Rogue",
+        "value": 2
+      },
+      {
+        "name": "Knight",
+        "value": 3
+      },
+      {
+        "name": "Summoner",
+        "value": 4
+      },
+      {
+        "name": "Acolyte",
+        "value": 5
+      },
+      {
+        "name": "Scout",
+        "value": 6
+      },
+      {
+        "name": "Paladin",
+        "value": 10
+      },
+      {
+        "name": "DragonKnight",
+        "value": 11
+      },
+      {
+        "name": "Berserker",
+        "value": 12
+      },
+      {
+        "name": "Revenant",
+        "value": 13
+      },
+      {
+        "name": "Priest",
+        "value": 14
+      },
+      {
+        "name": "Monk",
+        "value": 15
+      },
+      {
+        "name": "Wizard",
+        "value": 16
+      },
+      {
+        "name": "Chronomancer",
+        "value": 17
+      },
+      {
+        "name": "Druid",
+        "value": 18
+      },
+      {
+        "name": "Warlock",
+        "value": 19
+      },
+      {
+        "name": "Assassin",
+        "value": 20
+      },
+      {
+        "name": "Shinobi",
+        "value": 21
+      },
+      {
+        "name": "Gunslinger",
+        "value": 22
+      },
+      {
+        "name": "Ranger",
+        "value": 23
+      },
+      {
+        "name": "Jester",
+        "value": 24
+      },
+      {
+        "name": "Nightshade",
+        "value": 25
+      },
+      {
+        "name": "Necromancer",
+        "value": 26
+      },
+      {
+        "name": "Spellblade",
+        "value": 27
+      },
+      {
+        "name": "BladeMaster",
+        "value": 28
+      },
+      {
+        "name": "Mechanist",
+        "value": 29
+      },
+      {
+        "name": "Alchemist",
+        "value": 30
+      },
+      {
+        "name": "Weaver",
+        "value": 31
+      },
+      {
+        "name": "Merchant",
+        "value": 100
+      },
+      {
+        "name": "Blacksmith",
+        "value": 101
+      },
+      {
+        "name": "Cardweaver",
+        "value": 102
+      },
+      {
+        "name": "Craftsman",
+        "value": 103
+      },
+      {
+        "name": "Stylist",
+        "value": 104
+      },
+      {
+        "name": "Gemsmith",
+        "value": 105
+      },
+      {
+        "name": "Artificer",
+        "value": 106
+      }
+    ],
+    "StatType": [
+      {
+        "name": "None",
+        "value": -1
+      },
+      {
+        "name": "Str",
+        "value": 0
+      },
+      {
+        "name": "Vit",
+        "value": 1
+      },
+      {
+        "name": "Agi",
+        "value": 2
+      },
+      {
+        "name": "Dex",
+        "value": 3
+      },
+      {
+        "name": "Int",
+        "value": 4
+      },
+      {
+        "name": "Luk",
+        "value": 5
+      },
+      {
+        "name": "AllStats",
+        "value": 6
+      },
+      {
+        "name": "Hp",
+        "value": 7
+      },
+      {
+        "name": "Mp",
+        "value": 8
+      },
+      {
+        "name": "Atk",
+        "value": 9
+      },
+      {
+        "name": "Matk",
+        "value": 10
+      },
+      {
+        "name": "Def",
+        "value": 11
+      },
+      {
+        "name": "Mdef",
+        "value": 12
+      },
+      {
+        "name": "Hit",
+        "value": 13
+      },
+      {
+        "name": "Flee",
+        "value": 14
+      },
+      {
+        "name": "Crit",
+        "value": 15
+      },
+      {
+        "name": "DefFlat",
+        "value": 16
+      },
+      {
+        "name": "MdefFlat",
+        "value": 17
+      },
+      {
+        "name": "ElementWeapon",
+        "value": 18
+      },
+      {
+        "name": "ElementArmor",
+        "value": 19
+      },
+      {
+        "name": "HealthOnHit",
+        "value": 20
+      },
+      {
+        "name": "ManaOnHit",
+        "value": 21
+      },
+      {
+        "name": "LeechKill",
+        "value": 22
+      },
+      {
+        "name": "LeechKillMp",
+        "value": 23
+      },
+      {
+        "name": "Splash",
+        "value": 24
+      },
+      {
+        "name": "Range",
+        "value": 25
+      },
+      {
+        "name": "StatusImmune",
+        "value": 26
+      },
+      {
+        "name": "ReverseHealing",
+        "value": 27
+      },
+      {
+        "name": "NoAction",
+        "value": 28
+      },
+      {
+        "name": "NoMove",
+        "value": 29
+      },
+      {
+        "name": "NoAttack",
+        "value": 30
+      },
+      {
+        "name": "NoCast",
+        "value": 31
+      },
+      {
+        "name": "NoKnockback",
+        "value": 32
+      },
+      {
+        "name": "NoFlee",
+        "value": 33
+      },
+      {
+        "name": "NoCastCancel",
+        "value": 34
+      },
+      {
+        "name": "NoFlinch",
+        "value": 35
+      },
+      {
+        "name": "NoReflect",
+        "value": 36
+      },
+      {
+        "name": "NoRegenHp",
+        "value": 37
+      },
+      {
+        "name": "NoRegenMp",
+        "value": 38
+      },
+      {
+        "name": "AutocastHit",
+        "value": 39
+      },
+      {
+        "name": "AutocastAttack",
+        "value": 40
+      },
+      {
+        "name": "AutocastChance",
+        "value": 41
+      },
+      {
+        "name": "GrantSkill",
+        "value": 42
+      },
+      {
+        "name": "SkillLevel",
+        "value": 43
+      },
+      {
+        "name": "DamageToElement",
+        "value": 44
+      },
+      {
+        "name": "DamageToBoss",
+        "value": 45
+      },
+      {
+        "name": "DamageElement",
+        "value": 46
+      },
+      {
+        "name": "DamageMelee",
+        "value": 47
+      },
+      {
+        "name": "DamageMagic",
+        "value": 48
+      },
+      {
+        "name": "SkillDamage",
+        "value": 49
+      },
+      {
+        "name": "CostSkill",
+        "value": 50
+      },
+      {
+        "name": "CooldownSkill",
+        "value": 51
+      },
+      {
+        "name": "CritDamage",
+        "value": 52
+      },
+      {
+        "name": "ElementResist",
+        "value": 53
+      },
+      {
+        "name": "AtkWeapon",
+        "value": 54
+      },
+      {
+        "name": "MatkWeapon",
+        "value": 55
+      },
+      {
+        "name": "DamageFromElement",
+        "value": 56
+      },
+      {
+        "name": "DamageFromMagic",
+        "value": 57
+      },
+      {
+        "name": "DamageFromMelee",
+        "value": 58
+      },
+      {
+        "name": "HpRegen",
+        "value": 59
+      },
+      {
+        "name": "HpRegenMax",
+        "value": 60
+      },
+      {
+        "name": "MpRegen",
+        "value": 61
+      },
+      {
+        "name": "MpRegenMax",
+        "value": 62
+      },
+      {
+        "name": "AtkSpd",
+        "value": 63
+      },
+      {
+        "name": "CastSpd",
+        "value": 64
+      },
+      {
+        "name": "MoveSpd",
+        "value": 65
+      },
+      {
+        "name": "AfterCastDelay",
+        "value": 66
+      },
+      {
+        "name": "Healing",
+        "value": 67
+      },
+      {
+        "name": "HealingReceived",
+        "value": 68
+      },
+      {
+        "name": "AtkMult",
+        "value": 69
+      },
+      {
+        "name": "MatkMult",
+        "value": 70
+      },
+      {
+        "name": "HpMult",
+        "value": 71
+      },
+      {
+        "name": "MpMult",
+        "value": 72
+      },
+      {
+        "name": "DefMult",
+        "value": 73
+      },
+      {
+        "name": "MdefMult",
+        "value": 74
+      },
+      {
+        "name": "HpRegenMult",
+        "value": 75
+      },
+      {
+        "name": "MpRegenMult",
+        "value": 76
+      },
+      {
+        "name": "FleeMult",
+        "value": 77
+      },
+      {
+        "name": "HitMult",
+        "value": 78
+      },
+      {
+        "name": "CritMult",
+        "value": 79
+      },
+      {
+        "name": "DoubleAttack",
+        "value": 80
+      },
+      {
+        "name": "EnergyShield",
+        "value": 81
+      },
+      {
+        "name": "FreeCastMove",
+        "value": 82
+      },
+      {
+        "name": "FreeCastAtk",
+        "value": 83
+      },
+      {
+        "name": "SpellEcho",
+        "value": 84
+      },
+      {
+        "name": "Block",
+        "value": 85
+      },
+      {
+        "name": "ReflectDamage",
+        "value": 86
+      },
+      {
+        "name": "DualWield",
+        "value": 87
+      },
+      {
+        "name": "ExpRate",
+        "value": 88
+      },
+      {
+        "name": "DropRate",
+        "value": 89
+      },
+      {
+        "name": "MpCost",
+        "value": 90
+      },
+      {
+        "name": "LifeBond",
+        "value": 91
+      },
+      {
+        "name": "SummonStatShare",
+        "value": 92
+      },
+      {
+        "name": "SummonDamageShare",
+        "value": 93
+      },
+      {
+        "name": "ReflectSpell",
+        "value": 94
+      },
+      {
+        "name": "BlockShield",
+        "value": 95
+      },
+      {
+        "name": "RangeWand",
+        "value": 96
+      },
+      {
+        "name": "LeechChance",
+        "value": 97
+      },
+      {
+        "name": "Leech",
+        "value": 98
+      },
+      {
+        "name": "LeechMpChance",
+        "value": 99
+      },
+      {
+        "name": "LeechMp",
+        "value": 100
+      },
+      {
+        "name": "WeightLimit",
+        "value": 101
+      },
+      {
+        "name": "DamageRanged",
+        "value": 102
+      },
+      {
+        "name": "DamageFromRanged",
+        "value": 103
+      },
+      {
+        "name": "SkillCooldown",
+        "value": 104
+      },
+      {
+        "name": "SkillDuration",
+        "value": 105
+      },
+      {
+        "name": "SkillArea",
+        "value": 106
+      },
+      {
+        "name": "SkillHits",
+        "value": 107
+      },
+      {
+        "name": "SkillCost",
+        "value": 108
+      },
+      {
+        "name": "SkillRemoveKnockback",
+        "value": 109
+      },
+      {
+        "name": "SkillRemoveStatus",
+        "value": 110
+      },
+      {
+        "name": "Invisible",
+        "value": 111
+      },
+      {
+        "name": "Detector",
+        "value": 112
+      },
+      {
+        "name": "HpRegenRate",
+        "value": 113
+      },
+      {
+        "name": "MpRegenRate",
+        "value": 114
+      },
+      {
+        "name": "SummonHealingReceived",
+        "value": 115
+      },
+      {
+        "name": "SummonReflectDamage",
+        "value": 116
+      },
+      {
+        "name": "SummonHealthRegen",
+        "value": 117
+      },
+      {
+        "name": "HealthBarrier",
+        "value": 118
+      },
+      {
+        "name": "BuffDuration",
+        "value": 119
+      },
+      {
+        "name": "CritDef",
+        "value": 120
+      },
+      {
+        "name": "PerfectDodge",
+        "value": 121
+      },
+      {
+        "name": "PerfectCloak",
+        "value": 122
+      },
+      {
+        "name": "SkillPiercing",
+        "value": 123
+      },
+      {
+        "name": "SkillChains",
+        "value": 124
+      },
+      {
+        "name": "NoBlock",
+        "value": 125
+      },
+      {
+        "name": "SpellAuto",
+        "value": 126
+      },
+      {
+        "name": "SpellDodge",
+        "value": 127
+      },
+      {
+        "name": "TotalAtk",
+        "value": 128
+      },
+      {
+        "name": "TotalMatk",
+        "value": 129
+      },
+      {
+        "name": "Chain",
+        "value": 130
+      },
+      {
+        "name": "SummonAtkSpd",
+        "value": 131
+      },
+      {
+        "name": "SummonAtkMult",
+        "value": 132
+      },
+      {
+        "name": "SummonMatkMult",
+        "value": 133
+      },
+      {
+        "name": "SummonHpMult",
+        "value": 134
+      },
+      {
+        "name": "SummonAllStats",
+        "value": 135
+      },
+      {
+        "name": "SummonHealing",
+        "value": 136
+      },
+      {
+        "name": "SummonCrit",
+        "value": 137
+      },
+      {
+        "name": "FinalDamage",
+        "value": 138
+      },
+      {
+        "name": "FinalDamageReduction",
+        "value": 139
+      },
+      {
+        "name": "FinalDamageTaken",
+        "value": 140
+      },
+      {
+        "name": "AllResist",
+        "value": 141
+      },
+      {
+        "name": "DamageStatus",
+        "value": 142
+      },
+      {
+        "name": "DamageFromGround",
+        "value": 143
+      },
+      {
+        "name": "DamageFromStatus",
+        "value": 144
+      },
+      {
+        "name": "SkillCastTime",
+        "value": 145
+      },
+      {
+        "name": "AutoattackDamage",
+        "value": 146
+      },
+      {
+        "name": "NoStatusApply",
+        "value": 147
+      },
+      {
+        "name": "SkillSplash",
+        "value": 148
+      },
+      {
+        "name": "Sacrifice",
+        "value": 149
+      },
+      {
+        "name": "SacrificeDamage",
+        "value": 150
+      },
+      {
+        "name": "MatkPerStr",
+        "value": 151
+      },
+      {
+        "name": "AtkPerStr",
+        "value": 152
+      },
+      {
+        "name": "StrMult",
+        "value": 153
+      },
+      {
+        "name": "VitMult",
+        "value": 154
+      },
+      {
+        "name": "AgiMult",
+        "value": 155
+      },
+      {
+        "name": "DexMult",
+        "value": 156
+      },
+      {
+        "name": "IntMult",
+        "value": 157
+      },
+      {
+        "name": "LukMult",
+        "value": 158
+      },
+      {
+        "name": "AtkSpdMult",
+        "value": 159
+      },
+      {
+        "name": "CastSpdMult",
+        "value": 160
+      },
+      {
+        "name": "MoveSpdMult",
+        "value": 161
+      },
+      {
+        "name": "SkillCharges",
+        "value": 162
+      },
+      {
+        "name": "AutoFire",
+        "value": 163
+      },
+      {
+        "name": "DamageCloseRange",
+        "value": 164
+      },
+      {
+        "name": "DamageFarRange",
+        "value": 165
+      },
+      {
+        "name": "DamageToSummons",
+        "value": 166
+      },
+      {
+        "name": "DamageFromSummons",
+        "value": 167
+      },
+      {
+        "name": "SummonSpellEcho",
+        "value": 168
+      },
+      {
+        "name": "SummonDamage",
+        "value": 169
+      },
+      {
+        "name": "SummonDamageReduction",
+        "value": 170
+      },
+      {
+        "name": "SummonLeech",
+        "value": 171
+      },
+      {
+        "name": "SummonCostShare",
+        "value": 172
+      },
+      {
+        "name": "SummonHit",
+        "value": 173
+      },
+      {
+        "name": "SummonAutoattackDamage",
+        "value": 174
+      },
+      {
+        "name": "SummonResist",
+        "value": 175
+      },
+      {
+        "name": "SiphonHp",
+        "value": 176
+      },
+      {
+        "name": "SiphonMp",
+        "value": 177
+      },
+      {
+        "name": "HealShare",
+        "value": 178
+      },
+      {
+        "name": "DeathShare",
+        "value": 179
+      },
+      {
+        "name": "AutocastDeath",
+        "value": 180
+      },
+      {
+        "name": "AutocastKill",
+        "value": 181
+      },
+      {
+        "name": "CooldownRecovery",
+        "value": 182
+      },
+      {
+        "name": "StatusMaxStacks",
+        "value": 183
+      },
+      {
+        "name": "TwohandedStanceBonus",
+        "value": 184
+      },
+      {
+        "name": "AtkSpdLimit",
+        "value": 185
+      },
+      {
+        "name": "AutoattackMatk",
+        "value": 186
+      },
+      {
+        "name": "CastTimeReduction",
+        "value": 187
+      },
+      {
+        "name": "CastTimeReductionLimit",
+        "value": 188
+      },
+      {
+        "name": "CastRange",
+        "value": 189
+      },
+      {
+        "name": "DodgeRecovery",
+        "value": 190
+      },
+      {
+        "name": "AtkSpdFlat",
+        "value": 191
+      },
+      {
+        "name": "ThreatMult",
+        "value": 192
+      },
+      {
+        "name": "DefPierce",
+        "value": 193
+      },
+      {
+        "name": "MdefPierce",
+        "value": 194
+      },
+      {
+        "name": "PerfectHit",
+        "value": 195
+      },
+      {
+        "name": "HealingToBarrier",
+        "value": 196
+      },
+      {
+        "name": "SkillPull",
+        "value": 197
+      },
+      {
+        "name": "SkillDamageLowHp",
+        "value": 198
+      },
+      {
+        "name": "SkillRange",
+        "value": 199
+      },
+      {
+        "name": "SkillInstances",
+        "value": 200
+      },
+      {
+        "name": "SkillCrit",
+        "value": 201
+      },
+      {
+        "name": "SkillLeap",
+        "value": 202
+      },
+      {
+        "name": "SkillThreat",
+        "value": 203
+      },
+      {
+        "name": "SkillCastTimeMult",
+        "value": 204
+      },
+      {
+        "name": "SkillHitsMult",
+        "value": 205
+      },
+      {
+        "name": "SkillDurationMult",
+        "value": 206
+      },
+      {
+        "name": "SkillDamageReceived",
+        "value": 207
+      },
+      {
+        "name": "SkillDamageVsStatus",
+        "value": 208
+      },
+      {
+        "name": "SkillReplace",
+        "value": 209
+      },
+      {
+        "name": "StatusReplace",
+        "value": 210
+      },
+      {
+        "name": "StatusDuration",
+        "value": 211
+      },
+      {
+        "name": "SkillMaxInstances",
+        "value": 212
+      },
+      {
+        "name": "SkillAutocast",
+        "value": 213
+      },
+      {
+        "name": "SkillApplyStatus",
+        "value": 214
+      },
+      {
+        "name": "SkillConsumeStatus",
+        "value": 215
+      },
+      {
+        "name": "SkillRecoverHp",
+        "value": 216
+      },
+      {
+        "name": "SkillRecoverMp",
+        "value": 217
+      },
+      {
+        "name": "DamageVsStatus",
+        "value": 218
+      },
+      {
+        "name": "SetAtkSpd",
+        "value": 219
+      }
+    ],
+    "SkillEventType": [
+      {
+        "name": "None",
+        "value": 0
+      },
+      {
+        "name": "OnCast",
+        "value": 1
+      },
+      {
+        "name": "OnApplyHit",
+        "value": 2
+      },
+      {
+        "name": "OnCastComplete",
+        "value": 3
+      },
+      {
+        "name": "OnTakePhysicalHit",
+        "value": 4
+      },
+      {
+        "name": "OnDodge",
+        "value": 5
+      },
+      {
+        "name": "OnKill",
+        "value": 6
+      },
+      {
+        "name": "OnMaxStacks",
+        "value": 7
+      },
+      {
+        "name": "OnAutoAttack",
+        "value": 8
+      },
+      {
+        "name": "OnApplyStatus",
+        "value": 9
+      },
+      {
+        "name": "OnBlock",
+        "value": 10
+      },
+      {
+        "name": "OnCrit",
+        "value": 11
+      },
+      {
+        "name": "OnHealthLow",
+        "value": 12
+      },
+      {
+        "name": "OnApplyDamage",
+        "value": 13
+      },
+      {
+        "name": "OnBarrierDestroy",
+        "value": 14
+      },
+      {
+        "name": "OnEndStatus",
+        "value": 15
+      },
+      {
+        "name": "OnHeal",
+        "value": 16
+      },
+      {
+        "name": "OnRemoveStatus",
+        "value": 17
+      },
+      {
+        "name": "OnRevive",
+        "value": 18
+      },
+      {
+        "name": "OnCharge",
+        "value": 19
+      },
+      {
+        "name": "OnTeleport",
+        "value": 20
+      },
+      {
+        "name": "DisplayOnly",
+        "value": -1
+      }
+    ],
+    "SkillConditionType": [
+      {
+        "name": "None",
+        "value": 0
+      },
+      {
+        "name": "Status",
+        "value": 1
+      },
+      {
+        "name": "StatusSelf",
+        "value": 2
+      },
+      {
+        "name": "SingleTargetMagic",
+        "value": 3
+      }
+    ],
+    "SkillTriggerType": [
+      {
+        "name": "None",
+        "value": 0
+      },
+      {
+        "name": "Autocast",
+        "value": 1
+      },
+      {
+        "name": "Status",
+        "value": 2
+      },
+      {
+        "name": "StatusRemove",
+        "value": 3
+      },
+      {
+        "name": "RecoverHp",
+        "value": 4
+      },
+      {
+        "name": "RecoverMp",
+        "value": 5
+      },
+      {
+        "name": "Cooldown",
+        "value": 6
+      }
+    ],
+    "TargetType": [
+      {
+        "name": "Enemy",
+        "value": 0
+      },
+      {
+        "name": "Ally",
+        "value": 1
+      },
+      {
+        "name": "AllyNotSelf",
+        "value": 2
+      },
+      {
+        "name": "Self",
+        "value": 3
+      },
+      {
+        "name": "Any",
+        "value": 4
+      },
+      {
+        "name": "Summon",
+        "value": 5
+      },
+      {
+        "name": "SummonNotSelf",
+        "value": 6
+      },
+      {
+        "name": "Grave",
+        "value": 7
+      }
+    ],
+    "ItemRarity": [
+      {
+        "name": "Common",
+        "value": 0
+      },
+      {
+        "name": "Rare",
+        "value": 1
+      },
+      {
+        "name": "Unique",
+        "value": 2
+      },
+      {
+        "name": "Legendary",
+        "value": 3
+      }
+    ],
+    "StanceType": [
+      {
+        "name": "None",
+        "value": 0
+      },
+      {
+        "name": "Unarmed",
+        "value": 1
+      },
+      {
+        "name": "OneHanded",
+        "value": 2
+      },
+      {
+        "name": "TwoHanded",
+        "value": 3
+      },
+      {
+        "name": "DualWield",
+        "value": 4
+      }
+    ],
+    "ECProjectileType": [
+      {
+        "name": "GoldSmall",
+        "value": 0
+      },
+      {
+        "name": "GoldMedium",
+        "value": 1
+      },
+      {
+        "name": "GoldBig",
+        "value": 2
+      },
+      {
+        "name": "GoldShotgun",
+        "value": 3
+      },
+      {
+        "name": "RedSmall",
+        "value": 4
+      },
+      {
+        "name": "RedMedium",
+        "value": 5
+      },
+      {
+        "name": "RedBig",
+        "value": 6
+      },
+      {
+        "name": "RedShotgun",
+        "value": 7
+      },
+      {
+        "name": "SilverSmall",
+        "value": 8
+      },
+      {
+        "name": "SilverMedium",
+        "value": 9
+      },
+      {
+        "name": "SilverBig",
+        "value": 10
+      },
+      {
+        "name": "GreenSmall",
+        "value": 11
+      },
+      {
+        "name": "GreenMedium",
+        "value": 12
+      },
+      {
+        "name": "GreenBig",
+        "value": 13
+      },
+      {
+        "name": "PurpleSmall",
+        "value": 14
+      },
+      {
+        "name": "PurpleMedium",
+        "value": 15
+      },
+      {
+        "name": "PurpleBig",
+        "value": 16
+      },
+      {
+        "name": "LaserRedSmall",
+        "value": 17
+      },
+      {
+        "name": "LaserRedMedium",
+        "value": 18
+      },
+      {
+        "name": "LaserRedBig",
+        "value": 19
+      },
+      {
+        "name": "LaserGreenSmall",
+        "value": 20
+      },
+      {
+        "name": "LaserGreenMedium",
+        "value": 21
+      },
+      {
+        "name": "LaserGreenBig",
+        "value": 22
+      },
+      {
+        "name": "LaserBlueSmall",
+        "value": 23
+      },
+      {
+        "name": "LaserBlueMedium",
+        "value": 24
+      },
+      {
+        "name": "LaserBlueBig",
+        "value": 25
+      },
+      {
+        "name": "LaserPurpleSmall",
+        "value": 26
+      },
+      {
+        "name": "LaserPurpleMedium",
+        "value": 27
+      },
+      {
+        "name": "LaserPurpleBig",
+        "value": 28
+      },
+      {
+        "name": "LaserOrangeSmall",
+        "value": 29
+      },
+      {
+        "name": "LaserOrangeMedium",
+        "value": 30
+      },
+      {
+        "name": "LaserOrangeBig",
+        "value": 31
+      },
+      {
+        "name": "PlasmaBlueSmall",
+        "value": 32
+      },
+      {
+        "name": "PlasmaBlueMedium",
+        "value": 33
+      },
+      {
+        "name": "PlasmaBlueBig",
+        "value": 34
+      },
+      {
+        "name": "PlasmaPurpleSmall",
+        "value": 35
+      },
+      {
+        "name": "PlasmaPurpleMedium",
+        "value": 36
+      },
+      {
+        "name": "PlasmaPurpleBig",
+        "value": 37
+      },
+      {
+        "name": "PlasmaRedSmall",
+        "value": 38
+      },
+      {
+        "name": "PlasmaRedMedium",
+        "value": 39
+      },
+      {
+        "name": "PlasmaRedBig",
+        "value": 40
+      },
+      {
+        "name": "PlasmaGreenSmall",
+        "value": 41
+      },
+      {
+        "name": "PlasmaGreenMedium",
+        "value": 42
+      },
+      {
+        "name": "PlasmaGreenBig",
+        "value": 43
+      },
+      {
+        "name": "PlasmaDarkBlueSmall",
+        "value": 44
+      },
+      {
+        "name": "PlasmaDarkBlueMedium",
+        "value": 45
+      },
+      {
+        "name": "PlasmaDarkBlueBig",
+        "value": 46
+      },
+      {
+        "name": "SilverShotgun",
+        "value": 47
+      },
+      {
+        "name": "None",
+        "value": -1
+      }
+    ],
+    "DamageType": [
+      {
+        "name": "Melee",
+        "value": 0
+      },
+      {
+        "name": "Magic",
+        "value": 1
+      },
+      {
+        "name": "Ranged",
+        "value": 2
+      },
+      {
+        "name": "Status",
+        "value": 3
+      },
+      {
+        "name": "True",
+        "value": 4
+      }
+    ],
+    "CastType": [
+      {
+        "name": "None",
+        "value": 0
+      },
+      {
+        "name": "Target",
+        "value": 1
+      },
+      {
+        "name": "Ground",
+        "value": 2
+      },
+      {
+        "name": "Toggle",
+        "value": 3
+      }
+    ],
+    "CastIndicatorShape": [
+      {
+        "name": "Auto",
+        "value": 0
+      },
+      {
+        "name": "Circle",
+        "value": 1
+      },
+      {
+        "name": "Rectangle",
+        "value": 2
+      }
+    ],
+    "LeapType": [
+      {
+        "name": "None",
+        "value": 0
+      },
+      {
+        "name": "Jump",
+        "value": 1
+      },
+      {
+        "name": "Charge",
+        "value": 2
+      },
+      {
+        "name": "Over",
+        "value": 3
+      },
+      {
+        "name": "Backflip",
+        "value": 4
+      }
+    ],
+    "SkillCategory": [
+      {
+        "name": "None",
+        "value": 0
+      },
+      {
+        "name": "Weapon",
+        "value": 1
+      },
+      {
+        "name": "Body",
+        "value": 2
+      },
+      {
+        "name": "Aura",
+        "value": 3
+      },
+      {
+        "name": "Summon",
+        "value": 4
+      },
+      {
+        "name": "Coating",
+        "value": 5
+      }
+    ],
+    "EquipClass": [
+      {
+        "name": "Weapon",
+        "value": 0
+      },
+      {
+        "name": "Shield",
+        "value": 1
+      },
+      {
+        "name": "Head",
+        "value": 2
+      },
+      {
+        "name": "Legs",
+        "value": 3
+      },
+      {
+        "name": "Feet",
+        "value": 4
+      },
+      {
+        "name": "Chest",
+        "value": 5
+      },
+      {
+        "name": "Accessory",
+        "value": 6
+      },
+      {
+        "name": "Eyewear",
+        "value": 7
+      },
+      {
+        "name": "Back",
+        "value": 8
+      },
+      {
+        "name": "Grimoire",
+        "value": 9
+      }
+    ],
+    "Race": [
+      {
+        "name": "Humanoid",
+        "value": 0
+      },
+      {
+        "name": "Beast",
+        "value": 1
+      },
+      {
+        "name": "Dragon",
+        "value": 2
+      },
+      {
+        "name": "Fish",
+        "value": 3
+      },
+      {
+        "name": "Demon",
+        "value": 4
+      },
+      {
+        "name": "Formless",
+        "value": 5
+      },
+      {
+        "name": "Plant",
+        "value": 6
+      },
+      {
+        "name": "Undead",
+        "value": 7
+      },
+      {
+        "name": "Insect",
+        "value": 8
+      },
+      {
+        "name": "Angel",
+        "value": 9
+      }
+    ],
+    "Size": [
+      {
+        "name": "Small",
+        "value": 1
+      },
+      {
+        "name": "Medium",
+        "value": 2
+      },
+      {
+        "name": "Large",
+        "value": 3
+      }
+    ],
+    "StatusCategory": [
+      {
+        "name": "Buff",
+        "value": 0
+      },
+      {
+        "name": "Debuff",
+        "value": 1
+      }
+    ],
+    "StatusEffectFlag": [
+      {
+        "name": "RemoveOnReapply",
+        "value": 0
+      },
+      {
+        "name": "RemoveOnHit",
+        "value": 1
+      },
+      {
+        "name": "Stackable",
+        "value": 2
+      },
+      {
+        "name": "RemoveOnAttack",
+        "value": 3
+      },
+      {
+        "name": "SelfStatus",
+        "value": 4
+      },
+      {
+        "name": "StacksRefresh",
+        "value": 5
+      },
+      {
+        "name": "RemoveOnCast",
+        "value": 6
+      },
+      {
+        "name": "AlwaysReapply",
+        "value": 7
+      },
+      {
+        "name": "RemoveOnMove",
+        "value": 8
+      },
+      {
+        "name": "DecayOnMove",
+        "value": 9
+      },
+      {
+        "name": "StackOnStill",
+        "value": 10
+      },
+      {
+        "name": "RemoveOnSwap",
+        "value": 11
+      }
+    ],
+    "ArtifactSlot": [
+      {
+        "name": "Rune",
+        "value": 0
+      },
+      {
+        "name": "Jewel",
+        "value": 1
+      },
+      {
+        "name": "Scroll",
+        "value": 2
+      },
+      {
+        "name": "Relic",
+        "value": 3
+      }
+    ],
+    "Speed": [
+      {
+        "name": "None",
+        "value": 0
+      },
+      {
+        "name": "VerySlow",
+        "value": 1
+      },
+      {
+        "name": "Slow",
+        "value": 2
+      },
+      {
+        "name": "Medium",
+        "value": 3
+      },
+      {
+        "name": "Fast",
+        "value": 4
+      },
+      {
+        "name": "VeryFast",
+        "value": 5
+      }
+    ]
+  }
+}

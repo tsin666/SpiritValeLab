@@ -42,6 +42,7 @@ import {
   runtimeCatalogKinds,
   runtimeDataMeta,
   runtimeEquipmentRecords,
+  runtimeEquipmentSetRecords,
   runtimeRecordsForKind,
   StanceType,
   StatType,
@@ -93,6 +94,34 @@ const buildSelectionSchema = z.object({
   id: z.string().trim().min(1).max(120)
 }).strict()
 const finiteBuildNumberSchema = z.number().finite().min(-1_000_000_000).max(1_000_000_000)
+const runtimeEffectValueSchema = z.object({
+  base: z.number().finite(),
+  perLevel: z.number().finite(),
+  string: z.string(),
+  string2: z.string()
+}).strict()
+const runtimeEffectSchema = z.object({
+  name: z.string().min(1),
+  type: z.string().min(1),
+  typeValue: z.number().int(),
+  value: runtimeEffectValueSchema,
+  eventType: z.string().min(1),
+  eventTypeValue: z.number().int(),
+  eventValue: z.string(),
+  conditionType: z.string().min(1),
+  conditionTypeValue: z.number().int(),
+  conditionValue: z.string(),
+  chance: z.number().finite(),
+  triggerType: z.string().min(1),
+  triggerTypeValue: z.number().int(),
+  target: z.string().min(1),
+  targetValue: z.number().int()
+}).strict()
+const runtimeRequirementSchema = z.object({
+  skillId: z.string().min(1),
+  level: z.number().int().min(0),
+  resolvedConfigKind: z.enum(['active', 'passive'])
+}).strict()
 const statTypeSchema = z.enum(StatType as unknown as [string, ...string[]])
 const stanceTypeSchema = z.enum(StanceType as unknown as [string, ...string[]])
 const artifactSlotSchema = z.enum(ArtifactSlot as unknown as [string, ...string[]])
@@ -328,6 +357,66 @@ function catalogSnapshot(item: Record<string, unknown>) {
   }
 }
 
+function runtimeEffectSnapshots(value: unknown): Array<z.infer<typeof runtimeEffectSchema>> {
+  return arrayOrEmpty(value).flatMap(effect => {
+    // runtime-data enriches set effects with a derived requiredPieces field for
+    // catalog browsing. It is not serialized by the game and therefore must
+    // not enter an immutable BD source snapshot.
+    const { requiredPieces: _derivedRequiredPieces, ...sourceEffect } = asRecord(effect)
+    const parsed = runtimeEffectSchema.safeParse(sourceEffect)
+    return parsed.success ? [parsed.data] : []
+  })
+}
+
+function equipmentSetSnapshot(value: unknown): Record<string, unknown> | undefined {
+  const item = asRecord(value)
+  const id = readString(item.id)
+  if (!id) return undefined
+  const effects = runtimeEffectSnapshots(item.fullSet)
+  const equipmentIds = arrayOrEmpty(item.equipmentIds)
+    .map(readString)
+    .filter((entry): entry is string => Boolean(entry))
+  return {
+    ...catalogSnapshot(item),
+    equipmentIds,
+    ...(effects.length ? { effects } : {})
+  }
+}
+
+function grimoirePassiveSnapshot(value: unknown): Record<string, unknown> | undefined {
+  const item = asRecord(value)
+  const id = readString(item.id)
+  if (!id) return undefined
+  const description = asRecord(item.description)
+  const effects = runtimeEffectSnapshots(item.passives)
+  const weaponTypes = arrayOrEmpty(item.weaponTypes)
+    .map(readString)
+    .filter((entry): entry is string => Boolean(entry))
+  const weaponTypeValues = arrayOrEmpty(item.weaponTypeValues)
+    .filter((entry): entry is number => typeof entry === 'number' && Number.isInteger(entry))
+  const stanceTypes = arrayOrEmpty(item.stanceTypes)
+    .map(readString)
+    .filter((entry): entry is string => Boolean(entry))
+  const stanceTypeValues = arrayOrEmpty(item.stanceTypeValues)
+    .filter((entry): entry is number => typeof entry === 'number' && Number.isInteger(entry))
+  const requirements = arrayOrEmpty(item.requirements).flatMap(requirement => {
+    const parsed = runtimeRequirementSchema.safeParse(requirement)
+    return parsed.success ? [parsed.data] : []
+  })
+  return {
+    ...catalogSnapshot(item),
+    descriptionZh: readString(description.zh) || '',
+    descriptionEn: readString(description.en) || '',
+    maxLevel: typeof item.maxLevel === 'number' ? item.maxLevel : 0,
+    weaponTypes,
+    weaponTypeValues,
+    stanceTypes,
+    stanceTypeValues,
+    requirements,
+    ...(effects.length ? { effects } : {})
+  }
+}
+
 function compactRuntimeOption(value: unknown) {
   const item = asRecord(value)
   const id = readString(item.id) || 'unknown'
@@ -352,6 +441,16 @@ function equipClassForType(type: string | null): string | null {
   const key = canonical(type || '')
   if (weaponEquipTypes.has(key)) return 'Weapon'
   return directEquipClasses.get(key) || null
+}
+
+function allowedEquipmentSlotKeys(item: EquipmentRecord): string[] {
+  const type = canonical(item.type || '')
+  if (weaponEquipTypes.has(type)) return ['main-hand', 'off-hand']
+  if (type === canonical('Accessory')) return ['accessory-left', 'accessory-right']
+  if (type === canonical('Shield')) return ['off-hand']
+  const directSlots = ['Head', 'Back', 'Eyewear', 'Feet', 'Chest', 'Legs']
+  const direct = directSlots.find(value => canonical(value) === type)
+  return direct ? [slugify(direct)] : []
 }
 
 function recordsForCatalogKind(kind: RuntimeCatalogKind): { records: unknown[]; source: string; runtime: boolean } {
@@ -477,6 +576,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
   const artifactRecords = runtimeRecordsForKind('artifacts')
   const gemRecords = runtimeRecordsForKind('gems')
   const cardRecords = runtimeRecordsForKind('cards')
+  const equipmentSetById = runtimeSelectionMap(runtimeEquipmentSetRecords)
   const activeSkillById = selectionMap(skillCatalog)
   const passiveSkillById = runtimeSelectionMap(skillPassiveRecords)
   const artifactById = runtimeSelectionMap(artifactRecords)
@@ -668,12 +768,32 @@ export async function buildApp(options: BuildAppOptions = {}) {
       item: EquipmentRecord
       selection: typeof input.equipment[number]
       cards: Array<Record<string, unknown>>
+      set: Record<string, unknown> | undefined
     }> = []
     for (const selection of input.equipment) {
       const item = equipmentById.get(canonical(selection.id))
       if (!item) return reply.code(400).send({ error: 'Unknown equipment', code: 'UNKNOWN_EQUIPMENT', value: selection.id })
+      if (canonical(item.type || '') === canonical('Grimoire')) {
+        return reply.code(400).send({
+          error: 'Grimoires must use the dedicated grimoire slots',
+          code: 'GRIMOIRE_NOT_REGULAR_EQUIPMENT',
+          value: selection.id
+        })
+      }
       if (item.allowedArchetypes.length && !item.allowedArchetypes.some(value => inheritsArchetype(archetype.id, value))) {
         return reply.code(400).send({ error: 'Equipment is not available to this archetype', code: 'EQUIPMENT_ARCHETYPE_MISMATCH', value: selection.id })
+      }
+      if (selection.slotKey) {
+        const allowedSlotKeys = allowedEquipmentSlotKeys(item)
+        if (!allowedSlotKeys.includes(selection.slotKey)) {
+          return reply.code(400).send({
+            error: 'Equipment does not fit the selected loadout slot',
+            code: 'EQUIPMENT_SLOT_MISMATCH',
+            value: selection.id,
+            slotKey: selection.slotKey,
+            allowedSlotKeys
+          })
+        }
       }
       // EquipConfig.slots is an unexplained source scalar, not the EquipSlot
       // enum. Do not reinterpret it as a card-capacity rule without evidence.
@@ -699,7 +819,8 @@ export async function buildApp(options: BuildAppOptions = {}) {
           equipClass
         })
       }
-      selectedEquipment.push({ item, selection, cards })
+      const setRecord = item.setId ? equipmentSetById.get(canonical(item.setId)) : undefined
+      selectedEquipment.push({ item, selection, cards, set: equipmentSetSnapshot(setRecord) })
     }
 
     const selectedArtifacts: Array<Record<string, unknown>> = []
@@ -754,7 +875,8 @@ export async function buildApp(options: BuildAppOptions = {}) {
       }
       selectedGrimoires.push({
         ...catalogSnapshot(asRecord(item)),
-        slotIndex: selection.slotIndex
+        slotIndex: selection.slotIndex,
+        passive: grimoirePassiveSnapshot(passive)
       })
     }
 
@@ -787,7 +909,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
         icon: skill.icon || undefined
       })),
       skillTree: selectedSkillTree,
-      equipment: selectedEquipment.map(({ item, selection, cards }) => ({
+      equipment: selectedEquipment.map(({ item, selection, cards, set }) => ({
         id: item.id,
         slug: item.slug,
         name: item.name.en || item.name.zh,
@@ -799,7 +921,9 @@ export async function buildApp(options: BuildAppOptions = {}) {
         refineLevel: selection.refineLevel,
         potential: selection.potential,
         actualAffixes: selection.actualAffixes,
-        cards
+        cards,
+        ...(item.setId ? { setId: item.setId } : {}),
+        ...(set ? { set } : {})
       })),
       artifacts: selectedArtifacts,
       grimoires: selectedGrimoires
@@ -983,10 +1107,14 @@ export async function buildApp(options: BuildAppOptions = {}) {
         type: item.type,
         element: item.element,
         levelRequired: item.levelRequired,
+        setId: item.setId,
         allowedArchetypes: item.allowedArchetypes,
         hasArchetypeRestriction: item.allowedArchetypes.length > 0,
         icon: item.icon
       })),
+      equipmentSets: runtimeEquipmentSetRecords
+        .map(equipmentSetSnapshot)
+        .filter((item): item is Record<string, unknown> => Boolean(item)),
       grimoires: grimoireEquipment.map(item => ({
         id: item.id,
         slug: item.slug,
@@ -999,7 +1127,8 @@ export async function buildApp(options: BuildAppOptions = {}) {
         allowedArchetypes: item.allowedArchetypes,
         hasRestriction: item.allowedArchetypes.length > 0,
         hasArchetypeRestriction: item.allowedArchetypes.length > 0,
-        icon: item.icon
+        icon: item.icon,
+        passive: grimoirePassiveSnapshot(passiveSkillById.get(canonical(item.id)))
       })),
       artifacts: artifactRecords.map(value => {
         const item = asRecord(value)

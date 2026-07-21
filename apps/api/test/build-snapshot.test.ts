@@ -102,12 +102,76 @@ test('legacy build payload remains backward compatible', async () => {
   assert.deepEqual(response.json().skillTree || [], [])
   assert.deepEqual(response.json().artifacts || [], [])
   assert.deepEqual(response.json().grimoires || [], [])
+  assert.equal('setId' in response.json().equipment[0], false)
+  assert.equal('set' in response.json().equipment[0], false)
+
+  const legacyGrimoireDocument = new BuildModel({
+    ...response.json(),
+    snapshotVersion: 1,
+    grimoires: [{ slotIndex: 0, id: 'Mage_1' }]
+  })
+  await legacyGrimoireDocument.validate()
+  assert.equal(legacyGrimoireDocument.toObject().grimoires[0].passive, undefined)
 
   const implicitVersion = richWizardPayload('snapshot-version-auto-detected')
   delete implicitVersion.snapshotVersion
   const richResponse = await app.inject({ method: 'POST', url: '/api/builds', payload: implicitVersion })
   assert.equal(richResponse.statusCode, 201, JSON.stringify(richResponse.json()))
   assert.equal(richResponse.json().snapshotVersion, 1)
+})
+
+test('selected set equipment persists only verified runtime set identity, localized names and effects', async () => {
+  const payload = {
+    ...legacyPayload('snapshot-runtime-equipment-set'),
+    equipment: [{ id: 'ArcaneChest' }]
+  }
+  const response = await app.inject({ method: 'POST', url: '/api/builds', payload })
+  assert.equal(response.statusCode, 201, JSON.stringify(response.json()))
+  const equipment = response.json().equipment[0]
+
+  assert.equal(equipment.id, 'ArcaneChest')
+  assert.equal(equipment.setId, 'Arcane')
+  assert.deepEqual({
+    id: equipment.set.id,
+    slug: equipment.set.slug,
+    name: equipment.set.name,
+    nameZh: equipment.set.nameZh,
+    nameEn: equipment.set.nameEn
+  }, {
+    id: 'Arcane',
+    slug: 'arcane',
+    name: 'Arcane',
+    nameZh: 'Arcane',
+    nameEn: 'Arcane'
+  })
+  assert.equal(equipment.set.effects.length, 5)
+  assert.deepEqual(equipment.set.equipmentIds, ['ArcaneChest', 'ArcaneFeet', 'ArcaneGloves', 'ArcaneLegs'])
+  assert.deepEqual(equipment.set.effects[0], {
+    name: 'AllStats_3',
+    type: 'AllStats',
+    typeValue: 6,
+    value: { base: 3, perLevel: 0, string: '', string2: '' },
+    eventType: 'None',
+    eventTypeValue: 0,
+    eventValue: '',
+    conditionType: 'None',
+    conditionTypeValue: 0,
+    conditionValue: '',
+    chance: 0,
+    triggerType: 'None',
+    triggerTypeValue: 0,
+    target: 'Enemy',
+    targetValue: 0
+  })
+
+  const mongoDocument = new BuildModel(response.json())
+  await mongoDocument.validate()
+  const mongoEquipment = mongoDocument.toObject().equipment[0]
+  assert.equal(mongoEquipment.setId, 'Arcane')
+  assert.deepEqual(mongoEquipment.set.equipmentIds, ['ArcaneChest', 'ArcaneFeet', 'ArcaneGloves', 'ArcaneLegs'])
+  assert.equal(mongoEquipment.set.effects.length, 5)
+  assert.equal('_id' in mongoEquipment.set, false)
+  assert.equal('_id' in mongoEquipment.set.effects[0], false)
 })
 
 test('complete class-agnostic snapshot is enriched and survives POST then GET intact', async () => {
@@ -167,6 +231,31 @@ test('complete class-agnostic snapshot is enriched and survives POST then GET in
   assert.equal(build.grimoires[0].slotIndex, 0)
   assert.equal(build.grimoires[0].name, 'Elementalist')
   assert.match(build.grimoires[0].icon, /^\/game-assets\/runtime-icons\/.+\.png$/)
+  assert.equal(build.grimoires[0].passive.id, 'Mage_1')
+  assert.equal(build.grimoires[0].passive.descriptionEn, 'Four attunements share one page, arguing until they become a single harmony.')
+  assert.deepEqual(build.grimoires[0].passive.weaponTypes, [])
+  assert.deepEqual(build.grimoires[0].passive.weaponTypeValues, [])
+  assert.deepEqual(build.grimoires[0].passive.stanceTypes, [])
+  assert.deepEqual(build.grimoires[0].passive.stanceTypeValues, [])
+  assert.deepEqual(build.grimoires[0].passive.requirements, [])
+  assert.equal(build.grimoires[0].passive.effects.length, 4)
+  assert.deepEqual(build.grimoires[0].passive.effects[0], {
+    name: 'StatusReplace_FireAttunement_ElementalAttunement',
+    type: 'StatusReplace',
+    typeValue: 210,
+    value: { base: 0, perLevel: 0, string: 'FireAttunement', string2: 'ElementalAttunement' },
+    eventType: 'None',
+    eventTypeValue: 0,
+    eventValue: '',
+    conditionType: 'None',
+    conditionTypeValue: 0,
+    conditionValue: '',
+    chance: 0,
+    triggerType: 'None',
+    triggerTypeValue: 0,
+    target: 'Enemy',
+    targetValue: 0
+  })
 
   const mongoDocument = new BuildModel(build)
   await mongoDocument.validate()
@@ -174,10 +263,39 @@ test('complete class-agnostic snapshot is enriched and survives POST then GET in
   assert.equal(mongoSnapshot.skillTree[0].id, 'Meteor')
   assert.equal(mongoSnapshot.artifacts[0].gem.id, 'Meteor Gem')
   assert.equal(mongoSnapshot.grimoires[0].id, 'Mage_1')
+  assert.equal(mongoSnapshot.grimoires[0].passive.effects.length, 4)
   assert.equal('_id' in mongoSnapshot.skillTree[0], false)
   assert.equal('_id' in mongoSnapshot.equipment[0].cards[0], false)
   assert.equal('_id' in mongoSnapshot.artifacts[0], false)
   assert.equal('_id' in mongoSnapshot.grimoires[0], false)
+  assert.equal('_id' in mongoSnapshot.grimoires[0].passive, false)
+  assert.equal('_id' in mongoSnapshot.grimoires[0].passive.effects[0], false)
+})
+
+test('grimoire snapshots preserve verified weapon and stance restrictions', async () => {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/builds',
+    payload: {
+      ...legacyPayload('snapshot-grimoire-weapon-restriction'),
+      archetype: 'Acolyte',
+      skills: [{ id: 'HolyLight' }],
+      equipment: [],
+      snapshotVersion: 1,
+      grimoires: [{ slotIndex: 0, id: 'Acolyte_2' }]
+    }
+  })
+  assert.equal(response.statusCode, 201, JSON.stringify(response.json()))
+  const passive = response.json().grimoires[0].passive
+  assert.deepEqual(passive.weaponTypes, ['Mace'])
+  assert.deepEqual(passive.weaponTypeValues, [5])
+  assert.deepEqual(passive.stanceTypes, [])
+  assert.deepEqual(passive.stanceTypeValues, [])
+  assert.deepEqual(passive.requirements, [])
+
+  const mongoDocument = new BuildModel(response.json())
+  await mongoDocument.validate()
+  assert.deepEqual(mongoDocument.toObject().grimoires[0].passive.weaponTypes, ['Mace'])
 })
 
 test('grimoire compatibility follows every class lineage instead of one featured character', async () => {
@@ -228,6 +346,56 @@ test('snapshot schemas reject duplicate slots, mixed legacy slots and unreviewed
     mutate(payload)
     await expectRejected(payload, 'VALIDATION_ERROR')
   }
+})
+
+test('verified equipment types enforce real loadout slot domains while slotless legacy input stays compatible', async () => {
+  const accepted: Array<[string, string]> = [
+    ['Amber Bow', 'accessory-left'],
+    ['Amber Bow', 'accessory-right'],
+    ['Arrowcatch Wall', 'off-hand'],
+    ['Azure Crown', 'head'],
+    ["Adventurer's Kit", 'back'],
+    ['3D Glasses', 'eyewear'],
+    ['ArcaneFeet', 'feet'],
+    ['ArcaneChest', 'chest'],
+    ['ArcaneLegs', 'legs'],
+    ['Abyss Shard', 'main-hand'],
+    ['Abyss Shard', 'off-hand']
+  ]
+  for (const [index, [id, slotKey]] of accepted.entries()) {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/builds',
+      payload: {
+        ...legacyPayload(`snapshot-slot-accepted-${index}`),
+        equipment: [{ id, slotKey }]
+      }
+    })
+    assert.equal(response.statusCode, 201, `${id} -> ${slotKey}: ${JSON.stringify(response.json())}`)
+  }
+
+  const rejected: Array<[string, string]> = [
+    ['Amber Bow', 'head'],
+    ['Arrowcatch Wall', 'main-hand'],
+    ['Azure Crown', 'back'],
+    ["Adventurer's Kit", 'eyewear'],
+    ['3D Glasses', 'head'],
+    ['ArcaneFeet', 'legs'],
+    ['ArcaneChest', 'feet'],
+    ['ArcaneLegs', 'chest'],
+    ['Abyss Shard', 'head']
+  ]
+  for (const [index, [id, slotKey]] of rejected.entries()) {
+    await expectRejected({
+      ...legacyPayload(`snapshot-slot-rejected-${index}`),
+      equipment: [{ id, slotKey }]
+    }, 'EQUIPMENT_SLOT_MISMATCH')
+  }
+
+  await expectRejected({
+    ...legacyPayload('snapshot-grimoire-not-regular-equipment'),
+    equipment: [{ id: 'Mage_1' }]
+  }, 'GRIMOIRE_NOT_REGULAR_EQUIPMENT')
 })
 
 test('snapshot catalog references and game constraints return explicit domain codes', async () => {

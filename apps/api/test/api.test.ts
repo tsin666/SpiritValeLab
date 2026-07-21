@@ -427,7 +427,7 @@ test('builder options are compact and a user build publishes into fallback searc
     payload: { ...payload, slug: 'incompatible-build-test', equipment: [{ id: 'Acolyte_1' }] }
   })
   assert.equal(incompatible.statusCode, 400)
-  assert.equal(incompatible.json().code, 'EQUIPMENT_ARCHETYPE_MISMATCH')
+  assert.equal(incompatible.json().code, 'GRIMOIRE_NOT_REGULAR_EQUIPMENT')
 
   const duplicateSkill = await app.inject({
     method: 'POST',

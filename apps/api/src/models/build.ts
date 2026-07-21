@@ -46,6 +46,48 @@ const buildCardSchema = new Schema({
   equipClass: String
 }, childSchemaOptions)
 
+const runtimeEffectValueSchema = new Schema({
+  base: { type: Number, required: true },
+  perLevel: { type: Number, required: true },
+  string: String,
+  string2: String
+}, childSchemaOptions)
+
+const runtimeEffectSchema = new Schema({
+  name: { type: String, required: true },
+  type: { type: String, required: true },
+  typeValue: { type: Number, required: true },
+  value: { type: runtimeEffectValueSchema, required: true },
+  eventType: { type: String, required: true },
+  eventTypeValue: { type: Number, required: true },
+  eventValue: String,
+  conditionType: { type: String, required: true },
+  conditionTypeValue: { type: Number, required: true },
+  conditionValue: String,
+  chance: { type: Number, required: true },
+  triggerType: { type: String, required: true },
+  triggerTypeValue: { type: Number, required: true },
+  target: { type: String, required: true },
+  targetValue: { type: Number, required: true }
+}, childSchemaOptions)
+
+const buildEquipmentSetSchema = new Schema({
+  id: { type: String, required: true },
+  slug: String,
+  name: String,
+  nameZh: String,
+  nameEn: String,
+  icon: String,
+  equipmentIds: { type: [String], default: undefined },
+  effects: { type: [runtimeEffectSchema], default: undefined }
+}, childSchemaOptions)
+
+const runtimeRequirementSchema = new Schema({
+  skillId: { type: String, required: true },
+  level: { type: Number, required: true, min: 0 },
+  resolvedConfigKind: { type: String, required: true, enum: ['active', 'passive'] }
+}, childSchemaOptions)
+
 const buildEquipmentSchema = new Schema({
   id: String,
   slug: String,
@@ -63,7 +105,9 @@ const buildEquipmentSchema = new Schema({
   refineLevel: { type: Number, min: 0, max: 100 },
   potential: { type: Number, min: 0, max: 100 },
   actualAffixes: { type: [buildStatValueSchema], default: [] },
-  cards: { type: [buildCardSchema], default: [] }
+  cards: { type: [buildCardSchema], default: [] },
+  setId: String,
+  set: { type: buildEquipmentSetSchema, default: undefined }
 }, childSchemaOptions)
 
 const buildArtifactGemSchema = new Schema({
@@ -97,7 +141,27 @@ const buildGrimoireSchema = new Schema({
   name: String,
   nameZh: String,
   nameEn: String,
-  icon: String
+  icon: String,
+  passive: {
+    type: new Schema({
+      id: { type: String, required: true },
+      slug: String,
+      name: String,
+      nameZh: String,
+      nameEn: String,
+      icon: String,
+      descriptionZh: String,
+      descriptionEn: String,
+      maxLevel: { type: Number, required: true, min: 0 },
+      weaponTypes: { type: [String], default: undefined },
+      weaponTypeValues: { type: [Number], default: undefined },
+      stanceTypes: { type: [String], default: undefined },
+      stanceTypeValues: { type: [Number], default: undefined },
+      requirements: { type: [runtimeRequirementSchema], default: undefined },
+      effects: { type: [runtimeEffectSchema], default: undefined }
+    }, childSchemaOptions),
+    default: undefined
+  }
 }, childSchemaOptions)
 
 const characterSnapshotSchema = new Schema({

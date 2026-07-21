@@ -31,6 +31,7 @@ test('builder options expose the complete class-agnostic runtime catalogs and of
   assert.equal(options.archetypes.length, 31)
   assert.equal(options.skills.length, 279)
   assert.equal(options.equipment.length, 647)
+  assert.equal(options.equipmentSets.length, 24)
   assert.equal(options.skillPassives.length, 111)
   assert.equal(options.grimoires.length, 71)
   assert.equal(options.artifacts.length, 45)
@@ -95,6 +96,56 @@ test('builder options include enriched representative records from every loadout
   assert.equal(rogueGrimoire.hasArchetypeRestriction, true)
   assert.equal(localizedEnglish(rogueGrimoire.name), 'Hidden Strikes')
   assert.match(rogueGrimoire.icon, /^\/game-assets\/runtime-icons\/.+\.png$/)
+  assert.equal(rogueGrimoire.passive.id, 'Rogue_5')
+  assert.equal(rogueGrimoire.passive.descriptionEn, 'Concealed margins reward unseen killers with ruthless openings after every vanish.')
+  assert.equal(rogueGrimoire.passive.effects.length, 2)
+  assert.ok(Array.isArray(rogueGrimoire.passive.weaponTypes))
+  assert.ok(Array.isArray(rogueGrimoire.passive.weaponTypeValues))
+  assert.ok(Array.isArray(rogueGrimoire.passive.stanceTypes))
+  assert.ok(Array.isArray(rogueGrimoire.passive.stanceTypeValues))
+  assert.ok(Array.isArray(rogueGrimoire.passive.requirements))
+  assert.deepEqual(rogueGrimoire.passive.effects[0], {
+    name: 'OnApplyStatus_Cloaking_5_Ruthless',
+    type: 'None',
+    typeValue: -1,
+    value: { base: 5, perLevel: 0, string: 'Ruthless', string2: '' },
+    eventType: 'OnApplyStatus',
+    eventTypeValue: 9,
+    eventValue: 'Cloaking',
+    conditionType: 'None',
+    conditionTypeValue: 0,
+    conditionValue: '',
+    chance: 0,
+    triggerType: 'Status',
+    triggerTypeValue: 2,
+    target: 'Self',
+    targetValue: 3
+  })
+
+  const arcaneChest = options.equipment.find((item: JsonRecord) => item.id === 'ArcaneChest')
+  assert.equal(arcaneChest.setId, 'Arcane')
+  const arcaneSet = options.equipmentSets.find((item: JsonRecord) => item.id === 'Arcane')
+  assert.equal(arcaneSet.name, 'Arcane')
+  assert.equal(arcaneSet.nameEn, 'Arcane')
+  assert.deepEqual(arcaneSet.equipmentIds, ['ArcaneChest', 'ArcaneFeet', 'ArcaneGloves', 'ArcaneLegs'])
+  assert.equal(arcaneSet.effects.length, 5)
+  assert.deepEqual(arcaneSet.effects[0], {
+    name: 'AllStats_3',
+    type: 'AllStats',
+    typeValue: 6,
+    value: { base: 3, perLevel: 0, string: '', string2: '' },
+    eventType: 'None',
+    eventTypeValue: 0,
+    eventValue: '',
+    conditionType: 'None',
+    conditionTypeValue: 0,
+    conditionValue: '',
+    chance: 0,
+    triggerType: 'None',
+    triggerTypeValue: 0,
+    target: 'Enemy',
+    targetValue: 0
+  })
 
   const mageArtifact = options.artifacts.find((item: JsonRecord) => item.id === 'Mage')
   assert.equal(localizedEnglish(mageArtifact.name), 'Arcane Origin')

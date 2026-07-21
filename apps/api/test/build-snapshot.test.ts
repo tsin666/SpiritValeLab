@@ -123,13 +123,22 @@ test('legacy build payload remains backward compatible', async () => {
 test('selected set equipment persists only verified runtime set identity, localized names and effects', async () => {
   const payload = {
     ...legacyPayload('snapshot-runtime-equipment-set'),
-    equipment: [{ id: 'ArcaneChest' }]
+    equipment: [{ id: 'ArcaneChest', cards: [{ slotIndex: 0, id: 'Abomination' }] }]
   }
   const response = await app.inject({ method: 'POST', url: '/api/builds', payload })
   assert.equal(response.statusCode, 201, JSON.stringify(response.json()))
   const equipment = response.json().equipment[0]
 
   assert.equal(equipment.id, 'ArcaneChest')
+  assert.equal(equipment.type, 'chest')
+  assert.equal(equipment.element, 'Neutral')
+  assert.equal(equipment.levelRequired, 100)
+  assert.equal(equipment.primaryStats.length, 4)
+  assert.equal(equipment.secondaryStats.length, 1)
+  assert.match(equipment.descriptionEn, /Arcane seams/i)
+  assert.equal(equipment.cards[0].name, 'Abomination Card')
+  assert.equal(equipment.cards[0].equipClass, 'Chest')
+  assert.equal(equipment.cards[0].stats.length, 2)
   assert.equal(equipment.setId, 'Arcane')
   assert.deepEqual({
     id: equipment.set.id,
@@ -168,6 +177,9 @@ test('selected set equipment persists only verified runtime set identity, locali
   await mongoDocument.validate()
   const mongoEquipment = mongoDocument.toObject().equipment[0]
   assert.equal(mongoEquipment.setId, 'Arcane')
+  assert.equal(mongoEquipment.primaryStats.length, 4)
+  assert.equal(mongoEquipment.secondaryStats.length, 1)
+  assert.equal(mongoEquipment.cards[0].stats.length, 2)
   assert.deepEqual(mongoEquipment.set.equipmentIds, ['ArcaneChest', 'ArcaneFeet', 'ArcaneGloves', 'ArcaneLegs'])
   assert.equal(mongoEquipment.set.effects.length, 5)
   assert.equal('_id' in mongoEquipment.set, false)
@@ -210,6 +222,12 @@ test('complete class-agnostic snapshot is enriched and survives POST then GET in
   assert.deepEqual(build.equipment.map((entry: JsonRecord) => entry.slotKey), ['main-hand', 'off-hand'])
   assert.ok(build.equipment.every((entry: JsonRecord) => entry.name === 'Meteoric Staff'))
   assert.ok(build.equipment.every((entry: JsonRecord) => /^\/game-assets\/runtime-icons\/.+\.png$/.test(entry.icon)))
+  assert.ok(build.equipment.every((entry: JsonRecord) => entry.type === 'wand'))
+  assert.ok(build.equipment.every((entry: JsonRecord) => entry.element === 'Fire'))
+  assert.ok(build.equipment.every((entry: JsonRecord) => entry.levelRequired === 50))
+  assert.ok(build.equipment.every((entry: JsonRecord) => entry.primaryStats.length === 2))
+  assert.ok(build.equipment.every((entry: JsonRecord) => entry.secondaryStats.length === 4))
+  assert.match(build.equipment[0].descriptionEn, /star.s anger/i)
   assert.deepEqual(build.equipment.map((entry: JsonRecord) => entry.cards[0].equipClass), ['Weapon', 'Weapon'])
   assert.deepEqual(build.equipment.map((entry: JsonRecord) => entry.cards[0].name), ['Galaxian Brute Card', 'Galaxian Blaster Card'])
   assert.ok(build.equipment.every((entry: JsonRecord) => /^\/game-assets\/runtime-icons\/.+\.png$/.test(entry.cards[0].icon)))
@@ -226,6 +244,10 @@ test('complete class-agnostic snapshot is enriched and survives POST then GET in
   assert.deepEqual(build.artifacts.map((entry: JsonRecord) => entry.gem.name), Array(4).fill('Meteor Gem'))
   assert.deepEqual(build.artifacts.map((entry: JsonRecord) => entry.gem.affix), Array(4).fill('Meteor'))
   assert.ok(build.artifacts.every((entry: JsonRecord) => /^\/game-assets\/runtime-icons\/.+\.png$/.test(entry.gem.icon)))
+  assert.ok(build.artifacts.every((entry: JsonRecord) => entry.fullSet.length === 1))
+  assert.ok(build.artifacts.every((entry: JsonRecord) => entry.individual.length === 4))
+  assert.ok(build.artifacts.every((entry: JsonRecord) => entry.gem.stats.length === 1))
+  assert.match(build.artifacts[0].partDescriptionEn, /Vitae/i)
 
   assert.equal(build.grimoires[0].id, 'Mage_1')
   assert.equal(build.grimoires[0].slotIndex, 0)
@@ -262,6 +284,9 @@ test('complete class-agnostic snapshot is enriched and survives POST then GET in
   const mongoSnapshot = mongoDocument.toObject()
   assert.equal(mongoSnapshot.skillTree[0].id, 'Meteor')
   assert.equal(mongoSnapshot.artifacts[0].gem.id, 'Meteor Gem')
+  assert.equal(mongoSnapshot.equipment[0].primaryStats.length, 2)
+  assert.equal(mongoSnapshot.artifacts[0].individual.length, 4)
+  assert.equal(mongoSnapshot.artifacts[0].gem.stats.length, 1)
   assert.equal(mongoSnapshot.grimoires[0].id, 'Mage_1')
   assert.equal(mongoSnapshot.grimoires[0].passive.effects.length, 4)
   assert.equal('_id' in mongoSnapshot.skillTree[0], false)

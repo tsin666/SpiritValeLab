@@ -35,17 +35,6 @@ const buildSkillTreeSchema = new Schema({
   treeArchetypeSource: { type: String, required: true, enum: ['user-confirmed'] }
 }, childSchemaOptions)
 
-const buildCardSchema = new Schema({
-  slotIndex: { type: Number, required: true, min: 0, max: 3 },
-  id: { type: String, required: true },
-  slug: String,
-  name: String,
-  nameZh: String,
-  nameEn: String,
-  icon: String,
-  equipClass: String
-}, childSchemaOptions)
-
 const runtimeEffectValueSchema = new Schema({
   base: { type: Number, required: true },
   perLevel: { type: Number, required: true },
@@ -69,6 +58,20 @@ const runtimeEffectSchema = new Schema({
   triggerTypeValue: { type: Number, required: true },
   target: { type: String, required: true },
   targetValue: { type: Number, required: true }
+}, childSchemaOptions)
+
+const buildCardSchema = new Schema({
+  slotIndex: { type: Number, required: true, min: 0, max: 3 },
+  id: { type: String, required: true },
+  slug: String,
+  name: String,
+  nameZh: String,
+  nameEn: String,
+  icon: String,
+  descriptionZh: String,
+  descriptionEn: String,
+  equipClass: String,
+  stats: { type: [runtimeEffectSchema], default: undefined }
 }, childSchemaOptions)
 
 const buildEquipmentSetSchema = new Schema({
@@ -102,6 +105,13 @@ const buildEquipmentSchema = new Schema({
     enum: ['main-hand', 'off-hand', 'head', 'legs', 'feet', 'chest', 'accessory-left', 'accessory-right', 'eyewear', 'back']
   },
   icon: String,
+  descriptionZh: String,
+  descriptionEn: String,
+  type: String,
+  element: String,
+  levelRequired: Number,
+  primaryStats: { type: [runtimeEffectSchema], default: undefined },
+  secondaryStats: { type: [runtimeEffectSchema], default: undefined },
   refineLevel: { type: Number, min: 0, max: 100 },
   potential: { type: Number, min: 0, max: 100 },
   actualAffixes: { type: [buildStatValueSchema], default: [] },
@@ -117,7 +127,10 @@ const buildArtifactGemSchema = new Schema({
   nameZh: String,
   nameEn: String,
   icon: String,
-  affix: String
+  descriptionZh: String,
+  descriptionEn: String,
+  affix: String,
+  stats: { type: [runtimeEffectSchema], default: undefined }
 }, childSchemaOptions)
 
 const buildArtifactSchema = new Schema({
@@ -128,7 +141,15 @@ const buildArtifactSchema = new Schema({
   name: String,
   nameZh: String,
   nameEn: String,
+  descriptionZh: String,
+  descriptionEn: String,
   partIcon: String,
+  partDescriptionZh: String,
+  partDescriptionEn: String,
+  fullSet: { type: [runtimeEffectSchema], default: undefined },
+  perPiece: { type: [runtimeEffectSchema], default: undefined },
+  perRefine: { type: [runtimeEffectSchema], default: undefined },
+  individual: { type: [runtimeEffectSchema], default: undefined },
   refineLevel: { type: Number, min: 0, max: 100 },
   actualAffixes: { type: [buildStatValueSchema], default: [] },
   gem: { type: buildArtifactGemSchema, default: undefined }

@@ -357,6 +357,18 @@ function catalogSnapshot(item: Record<string, unknown>) {
   }
 }
 
+function describedCatalogSnapshot(value: unknown): Record<string, unknown> {
+  const item = asRecord(value)
+  const description = asRecord(item.description)
+  const descriptionZh = readString(description.zh)
+  const descriptionEn = readString(description.en, item.runtimeDescription)
+  return {
+    ...catalogSnapshot(item),
+    ...(descriptionZh ? { descriptionZh } : {}),
+    ...(descriptionEn ? { descriptionEn } : {})
+  }
+}
+
 function runtimeEffectSnapshots(value: unknown): Array<z.infer<typeof runtimeEffectSchema>> {
   return arrayOrEmpty(value).flatMap(effect => {
     // runtime-data enriches set effects with a derived requiredPieces field for
@@ -814,9 +826,10 @@ export async function buildApp(options: BuildAppOptions = {}) {
           })
         }
         cards.push({
-          ...catalogSnapshot(card),
+          ...describedCatalogSnapshot(card),
           slotIndex: cardSelection.slotIndex,
-          equipClass
+          equipClass,
+          stats: runtimeEffectSnapshots(card.stats)
         })
       }
       const setRecord = item.setId ? equipmentSetById.get(canonical(item.setId)) : undefined
@@ -844,15 +857,24 @@ export async function buildApp(options: BuildAppOptions = {}) {
         const gem = gemById.get(canonical(selection.gem.id))
         if (!gem) return reply.code(400).send({ error: 'Unknown gem', code: 'UNKNOWN_GEM', value: selection.gem.id })
         gemSnapshot = {
-          ...catalogSnapshot(gem),
-          affix: readString(gem.affix, gem.runtimeAffix) || undefined
+          ...describedCatalogSnapshot(gem),
+          affix: readString(gem.affix, gem.runtimeAffix) || undefined,
+          stats: runtimeEffectSnapshots(gem.stats)
         }
       }
+      const selectedPart = asRecord(parts[selection.partIndex])
+      const partDescription = asRecord(selectedPart.description)
       selectedArtifacts.push({
-        ...catalogSnapshot(artifact),
+        ...describedCatalogSnapshot(artifact),
         slot: selection.slot,
         partIndex: selection.partIndex,
-        partIcon: readString(asRecord(parts[selection.partIndex]).icon) || undefined,
+        partIcon: readString(selectedPart.icon) || undefined,
+        partDescriptionZh: readString(partDescription.zh) || undefined,
+        partDescriptionEn: readString(partDescription.en, selectedPart.runtimeDescription) || undefined,
+        fullSet: runtimeEffectSnapshots(artifact.fullSet),
+        perPiece: runtimeEffectSnapshots(artifact.perPiece),
+        perRefine: runtimeEffectSnapshots(artifact.perRefine),
+        individual: runtimeEffectSnapshots(artifact.individual),
         refineLevel: selection.refineLevel,
         actualAffixes: selection.actualAffixes,
         gem: gemSnapshot
@@ -918,6 +940,13 @@ export async function buildApp(options: BuildAppOptions = {}) {
         slot: selection.slot || item.slot || item.categoryLabel.zh,
         slotKey: selection.slotKey,
         icon: item.icon || undefined,
+        descriptionZh: item.description.zh || undefined,
+        descriptionEn: item.description.en || undefined,
+        type: item.type || undefined,
+        element: item.element || undefined,
+        levelRequired: item.levelRequired ?? undefined,
+        primaryStats: runtimeEffectSnapshots(item.primaryStats),
+        secondaryStats: runtimeEffectSnapshots(item.secondaryStats),
         refineLevel: selection.refineLevel,
         potential: selection.potential,
         actualAffixes: selection.actualAffixes,

@@ -407,6 +407,24 @@ test('builder options are compact and a user build publishes into fallback searc
   })
   assert.equal(incompatible.statusCode, 400)
   assert.equal(incompatible.json().code, 'EQUIPMENT_ARCHETYPE_MISMATCH')
+
+  const duplicateSkill = await app.inject({
+    method: 'POST',
+    url: '/api/builds',
+    payload: { ...payload, slug: 'duplicate-skill-test', skills: [{ id: 'Meteor' }, { id: 'meteor' }] }
+  })
+  assert.equal(duplicateSkill.statusCode, 400)
+  assert.equal(duplicateSkill.json().code, 'VALIDATION_ERROR')
+  assert.equal(duplicateSkill.json().details[0].message, 'Duplicate skill selection')
+
+  const duplicateEquipment = await app.inject({
+    method: 'POST',
+    url: '/api/builds',
+    payload: { ...payload, slug: 'duplicate-equipment-test', equipment: [{ id: 'Meteoric Staff' }, { id: 'meteoric-staff' }] }
+  })
+  assert.equal(duplicateEquipment.statusCode, 400)
+  assert.equal(duplicateEquipment.json().code, 'VALIDATION_ERROR')
+  assert.equal(duplicateEquipment.json().details[0].message, 'Duplicate equipment selection')
 })
 
 test('unknown route returns structured 404', async () => {

@@ -86,6 +86,7 @@ const equipmentSelectionSchema = z.object({
   id: z.string().trim().min(1).max(120),
   slot: z.string().trim().min(1).max(50).optional()
 }).strict()
+const hasUniqueSelectionIds = (items: Array<{ id: string }>) => new Set(items.map(item => canonical(item.id))).size === items.length
 const createBuildSchema = z.object({
   slug: z.string().trim().min(2).max(120).regex(/^[a-z0-9][a-z0-9-]*$/).optional(),
   title: z.string().trim().min(2).max(100),
@@ -94,8 +95,11 @@ const createBuildSchema = z.object({
   summary: z.string().trim().min(5).max(600),
   guide: z.array(z.string().trim().min(1).max(500)).max(20).default([]),
   tags: z.array(z.string().trim().min(1).max(30)).max(10).default([]),
-  skills: z.array(buildSelectionSchema).min(1).max(8),
-  equipment: z.array(equipmentSelectionSchema).max(12).default([]),
+  skills: z.array(buildSelectionSchema).min(1).max(8)
+    .refine(hasUniqueSelectionIds, { message: 'Duplicate skill selection' }),
+  equipment: z.array(equipmentSelectionSchema).max(12)
+    .refine(hasUniqueSelectionIds, { message: 'Duplicate equipment selection' })
+    .default([]),
   createdBy: z.string().trim().min(1).max(50).default('local-user')
 }).strict()
 

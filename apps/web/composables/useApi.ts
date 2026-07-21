@@ -41,7 +41,10 @@ export type BuildEquipmentCard = {
   nameZh?: string
   nameEn?: string
   icon?: string
+  descriptionZh?: string
+  descriptionEn?: string
   equipClass: string
+  stats?: RuntimeEffect[]
 }
 
 export type BuildEquipmentSlot =
@@ -56,6 +59,48 @@ export type BuildEquipmentSlot =
   | 'eyewear'
   | 'back'
 
+export type RuntimeEffectValue = {
+  base: number
+  perLevel: number
+  string?: string
+  string2?: string
+}
+
+export type RuntimeEffect = {
+  name: string
+  type: string
+  typeValue: number
+  value: RuntimeEffectValue
+  eventType: string
+  eventTypeValue: number
+  eventValue?: string
+  conditionType: string
+  conditionTypeValue: number
+  conditionValue?: string
+  chance: number
+  triggerType: string
+  triggerTypeValue: number
+  target: string
+  targetValue: number
+}
+
+export type RuntimeRequirement = {
+  skillId: string
+  level: number
+  resolvedConfigKind: 'active' | 'passive'
+}
+
+export type BuildEquipmentSet = {
+  id: string
+  slug?: string
+  name?: string
+  nameZh?: string
+  nameEn?: string
+  icon?: string
+  equipmentIds?: string[]
+  effects?: RuntimeEffect[]
+}
+
 export type BuildEquipment = {
   id: string
   slug?: string
@@ -67,10 +112,19 @@ export type BuildEquipment = {
   slotEn?: string
   icon?: string
   slotKey?: BuildEquipmentSlot
+  descriptionZh?: string
+  descriptionEn?: string
+  type?: string
+  element?: string
+  levelRequired?: number
+  primaryStats?: RuntimeEffect[]
+  secondaryStats?: RuntimeEffect[]
   refineLevel?: number
   potential?: number
   actualAffixes?: BuildStatValue[]
   cards?: BuildEquipmentCard[]
+  setId?: string
+  set?: BuildEquipmentSet
 }
 
 export type BuildArtifactSlot = 'Rune' | 'Jewel' | 'Scroll' | 'Relic'
@@ -82,7 +136,10 @@ export type BuildArtifactGem = {
   nameZh?: string
   nameEn?: string
   icon?: string
+  descriptionZh?: string
+  descriptionEn?: string
   affix?: string
+  stats?: RuntimeEffect[]
 }
 
 export type BuildArtifact = {
@@ -93,7 +150,15 @@ export type BuildArtifact = {
   name: string
   nameZh?: string
   nameEn?: string
+  descriptionZh?: string
+  descriptionEn?: string
   partIcon?: string
+  partDescriptionZh?: string
+  partDescriptionEn?: string
+  fullSet?: RuntimeEffect[]
+  perPiece?: RuntimeEffect[]
+  perRefine?: RuntimeEffect[]
+  individual?: RuntimeEffect[]
   refineLevel?: number
   actualAffixes?: BuildStatValue[]
   gem?: BuildArtifactGem
@@ -107,6 +172,25 @@ export type BuildGrimoire = {
   nameZh?: string
   nameEn?: string
   icon?: string
+  passive?: BuildGrimoirePassive
+}
+
+export type BuildGrimoirePassive = {
+  id: string
+  slug?: string
+  name?: string
+  nameZh?: string
+  nameEn?: string
+  icon?: string
+  descriptionZh?: string
+  descriptionEn?: string
+  maxLevel: number
+  weaponTypes?: string[]
+  weaponTypeValues?: number[]
+  stanceTypes?: string[]
+  stanceTypeValues?: number[]
+  requirements?: RuntimeRequirement[]
+  effects?: RuntimeEffect[]
 }
 
 export type BuildMetric = {
@@ -352,12 +436,14 @@ export type BuilderOption = {
   slot?: string | null
   type?: string | null
   element?: string | null
+  levelRequired?: number | null
   icon?: string | null
   fallbackIcon?: string | null
   fallbackIconSource?: ArchetypeFallbackIconSource | null
   fallbackIconBasis?: ArchetypeFallbackIconBasis | null
   allowedArchetypes?: Array<string | { value?: string; label?: string }>
   recommendedArchetypes?: string[]
+  previewedByArchetypes?: string[]
   stage?: ArchetypeStage
   requiredClassId?: string | null
   advancementJobLevel?: number | null
@@ -367,10 +453,19 @@ export type BuilderOption = {
   hasArchetypeRestriction?: boolean
   parts?: Array<{ index: number; icon?: string | null }>
   partCount?: number
+  descriptionZh?: string | null
+  descriptionEn?: string | null
+  fullSet?: RuntimeEffect[]
+  perPiece?: RuntimeEffect[]
+  perRefine?: RuntimeEffect[]
+  individual?: RuntimeEffect[]
+  stats?: RuntimeEffect[]
   affix?: string | LocalizedText | null
   equipClass?: string | null
   unique?: boolean
   isBoss?: boolean
+  setId?: string | null
+  passive?: BuildGrimoirePassive
 }
 
 export type BuilderEquipmentSlotOption = {
@@ -389,6 +484,7 @@ export type BuilderOptions = {
   skills: BuilderOption[]
   skillPassives: BuilderOption[]
   equipment: BuilderOption[]
+  equipmentSets?: BuildEquipmentSet[]
   grimoires: BuilderOption[]
   artifacts: BuilderOption[]
   gems: BuilderOption[]

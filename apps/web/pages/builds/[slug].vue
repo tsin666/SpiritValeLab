@@ -26,6 +26,19 @@ const guide = computed(() => buildGuide(build.value))
 const tags = computed(() => buildTags(build.value))
 const rankScore = computed(() => engagement.likes * 5 + engagement.views)
 const classInitials = computed(() => String(buildClass.value || 'BD').slice(0, 2).toLocaleUpperCase(locale.value))
+const equipmentPreview = computed(() => {
+  const left: Build['equipment'] = []
+  const right: Build['equipment'] = []
+  const leftSlots = /head|back|main-hand|weapon|legs|accessory|头|背|主手|武器|腿|饰品/i
+  const rightSlots = /off-hand|chest|hands|feet|class-item|副手|胸|手|脚|鞋|职业/i
+  for (const item of build.value?.equipment || []) {
+    const slot = `${item.slot || ''} ${item.slotEn || ''}`
+    if (leftSlots.test(slot) && !rightSlots.test(slot)) left.push(item)
+    else if (rightSlots.test(slot) && !leftSlots.test(slot)) right.push(item)
+    else (left.length <= right.length ? left : right).push(item)
+  }
+  return { left, right }
+})
 const itemPath = (item: Build['equipment'][number]) => item.kind === 'artifact'
   ? `/catalog/artifacts/${encodeURIComponent(String(item.slug))}`
   : `/equipment/${encodeURIComponent(String(item.slug))}`
@@ -120,6 +133,51 @@ useSeoMeta({ title: () => title.value || t('builds.seoTitle'), description: () =
 
     <p class="lead">{{ summary }}</p>
     <div v-if="tags.length" class="build-detail-tags"><span v-for="tag in tags" :key="tag"># {{ tag }}</span></div>
+
+    <section class="build-loadout-preview" :aria-labelledby="'loadout-preview-title'">
+      <header>
+        <div><span>{{ t('builds.loadoutPreviewKicker') }}</span><h2 id="loadout-preview-title">{{ t('builds.loadoutPreview') }}</h2></div>
+        <p>{{ t('builds.loadoutPreviewDescription') }}</p>
+      </header>
+      <div class="build-loadout-preview__stage">
+        <div class="build-loadout-preview__gear build-loadout-preview__gear--left">
+          <article v-for="(item, index) in equipmentPreview.left" :key="`left-${item.id}-${index}`">
+            <EquipmentIcon :item="item" size="medium"/>
+            <span><small>{{ slotText(equipmentSlot(item)) || t('builds.unknownSlot') }}</small><strong>{{ equipmentName(item) }}</strong></span>
+          </article>
+        </div>
+        <div class="build-loadout-preview__class">
+          <span>{{ t('builds.classPreview') }}</span>
+          <div class="build-loadout-preview__portrait">
+            <img v-if="build.classIcon" :src="build.classIcon" :alt="buildClass">
+            <b v-else aria-hidden="true">{{ classInitials }}</b>
+          </div>
+          <strong>{{ buildClass }}</strong>
+          <small>{{ title }}</small>
+        </div>
+        <div class="build-loadout-preview__gear build-loadout-preview__gear--right">
+          <article v-for="(item, index) in equipmentPreview.right" :key="`right-${item.id}-${index}`">
+            <EquipmentIcon :item="item" size="medium"/>
+            <span><small>{{ slotText(equipmentSlot(item)) || t('builds.unknownSlot') }}</small><strong>{{ equipmentName(item) }}</strong></span>
+          </article>
+        </div>
+      </div>
+      <div v-if="!build.equipment.length" class="build-loadout-preview__empty">{{ t('builds.emptyEquipmentPreview') }}</div>
+      <div class="build-loadout-preview__facts">
+        <div><span>{{ t('builds.previewClass') }}</span><strong>{{ buildClass }}</strong></div>
+        <div><span>{{ t('builds.previewDifficulty') }}</span><strong>{{ difficultyText(build.difficulty) }}</strong></div>
+        <div><span>{{ t('builds.previewSkills') }}</span><strong>{{ build.skills.length }}</strong></div>
+        <div><span>{{ t('builds.previewEquipment') }}</span><strong>{{ build.equipment.length }}</strong></div>
+      </div>
+      <div class="build-loadout-preview__attributes">
+        <h3>{{ t('builds.attributeSnapshot') }}</h3>
+        <div v-if="build.metrics.length" class="build-loadout-preview__metrics">
+          <div v-for="metric in build.metrics" :key="`preview-${metric.label}`"><span>{{ metricLabel(metric) }}</span><strong>{{ metric.value }}</strong></div>
+        </div>
+        <p v-else>{{ t('builds.attributeUnavailable') }}</p>
+      </div>
+    </section>
+
     <div class="detail-grid">
       <section>
         <h2>{{ t('builds.skills') }}</h2>

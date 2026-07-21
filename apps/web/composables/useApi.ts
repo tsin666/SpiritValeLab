@@ -359,14 +359,45 @@ export type BuilderOption = {
   recommendedArchetypes?: string[]
   stage?: ArchetypeStage
   requiredClassId?: string | null
+  advancementJobLevel?: number | null
+  maxJobLevel?: number | null
+  maxLevel?: number | null
+  configKind?: string | null
   hasArchetypeRestriction?: boolean
+  parts?: Array<{ index: number; icon?: string | null }>
+  partCount?: number
+  affix?: string | LocalizedText | null
+  equipClass?: string | null
+  unique?: boolean
+  isBoss?: boolean
+}
+
+export type BuilderEquipmentSlotOption = {
+  value: BuildEquipmentSlot
+  sourceName: string
+}
+
+export type BuilderOptionsMetadata = {
+  skillTreeOwnership: 'user-confirmed'
+  equipmentRuntimeSlotsMeaning: 'unverified'
+  artifactPartSlotMapping: 'user-confirmed'
 }
 
 export type BuilderOptions = {
   archetypes: BuilderOption[]
   skills: BuilderOption[]
+  skillPassives: BuilderOption[]
   equipment: BuilderOption[]
+  grimoires: BuilderOption[]
+  artifacts: BuilderOption[]
+  gems: BuilderOption[]
+  cards: BuilderOption[]
+  equipmentSlots: BuilderEquipmentSlotOption[]
+  artifactSlots: BuildArtifactSlot[]
+  stances: NonNullable<BuildCharacterSnapshot['stance']>[]
+  statTypes: string[]
   difficulties: string[]
+  metadata: BuilderOptionsMetadata
 }
 
 export function localizedText(value?: string | LocalizedText | null, locale: 'zh' | 'en' = 'zh') {

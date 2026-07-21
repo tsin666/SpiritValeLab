@@ -13,7 +13,16 @@ const maxTagLength = 30
 const maxGuideStepLength = 500
 
 const { data: options, status, error, refresh } = await useFetch<BuilderOptions>(`${api}/api/builder/options`, {
-  default: () => ({ archetypes: [], skills: [], equipment: [], difficulties: ['入门', '进阶', '专家'] })
+  default: () => ({
+    archetypes: [], skills: [], skillPassives: [], equipment: [], grimoires: [], artifacts: [], gems: [], cards: [],
+    equipmentSlots: [], artifactSlots: [], stances: [], statTypes: [],
+    difficulties: ['入门', '进阶', '专家'],
+    metadata: {
+      skillTreeOwnership: 'user-confirmed',
+      equipmentRuntimeSlotsMeaning: 'unverified',
+      artifactPartSlotMapping: 'user-confirmed'
+    }
+  })
 })
 
 const title = ref('')

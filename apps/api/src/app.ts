@@ -34,7 +34,7 @@ import {
   type ArchetypeRecord,
   type SkillRecord
 } from './archetypes.js'
-import { arrayOrEmpty, asRecord, canonical, flattenSearchText, humanize, readString, slugify } from './catalog-utils.js'
+import { arrayOrEmpty, asRecord, canonical, flattenSearchText, humanize, localized, readString, slugify } from './catalog-utils.js'
 import {
   runtimeArchetypeRecords,
   ArtifactSlot,
@@ -320,6 +320,17 @@ function catalogSnapshot(item: Record<string, unknown>) {
   }
 }
 
+function compactRuntimeOption(value: unknown) {
+  const item = asRecord(value)
+  const id = readString(item.id) || 'unknown'
+  return {
+    id,
+    slug: readString(item.slug) || slugify(id),
+    name: localized(item.name, readString(item.displayName) || id),
+    icon: readString(item.icon)
+  }
+}
+
 const weaponEquipTypes = new Set([
   'Sword', 'Dagger', 'Wand', 'Spear', 'Axe', 'Mace', 'Book', 'Pistol', 'Bow',
   'Scythe', 'Instrument', 'Twinblade', 'Mace2H', 'Sword2H', 'Axe2H', 'Spear2H',
@@ -463,6 +474,8 @@ export async function buildApp(options: BuildAppOptions = {}) {
   const artifactById = runtimeSelectionMap(artifactRecords)
   const gemById = runtimeSelectionMap(gemRecords)
   const cardById = runtimeSelectionMap(cardRecords)
+  const grimoireEquipment = allEquipment.filter(item => canonical(item.type || '') === canonical('Grimoire'))
+  const grimoireEquipmentById = selectionMap(grimoireEquipment)
   const ocrCatalogMatcher = createOcrCatalogMatcher({
     archetype: options.ocrCatalogSources?.archetype ?? allArchetypes,
     skill: options.ocrCatalogSources?.skill ?? skillCatalog,
@@ -925,6 +938,8 @@ export async function buildApp(options: BuildAppOptions = {}) {
         role: item.role,
         stage: item.stage,
         requiredClassId: item.requiredClassId,
+        maxJobLevel: typeof item.maxJobLevel === 'number' ? item.maxJobLevel : null,
+        advancementJobLevel: item.advancementJobLevel,
         icon: item.icon,
         fallbackIcon: item.fallbackIcon,
         fallbackIconSource: item.fallbackIconSource,
@@ -936,8 +951,21 @@ export async function buildApp(options: BuildAppOptions = {}) {
         name: optionName(item),
         allowedArchetypes: item.allowedArchetypes,
         recommendedArchetypes: recommendedArchetypesBySkill.get(canonical(item.id)) || [],
+        maxLevel: typeof item.maxLevel === 'number' ? item.maxLevel : 0,
+        configKind: readString(item.configKind) || 'active',
         icon: item.icon
       })),
+      skillPassives: skillPassiveRecords.map(value => {
+        const item = asRecord(value)
+        const option = compactRuntimeOption(item)
+        const grimoire = grimoireEquipmentById.get(canonical(option.id))
+        return {
+          ...option,
+          icon: option.icon || grimoire?.icon || null,
+          maxLevel: typeof item.maxLevel === 'number' ? item.maxLevel : 0,
+          configKind: readString(item.configKind) || 'passive'
+        }
+      }),
       equipment: allEquipment.map(item => ({
         id: item.id,
         slug: item.slug,
@@ -951,6 +979,69 @@ export async function buildApp(options: BuildAppOptions = {}) {
         hasArchetypeRestriction: item.allowedArchetypes.length > 0,
         icon: item.icon
       })),
+      grimoires: grimoireEquipment.map(item => ({
+        id: item.id,
+        slug: item.slug,
+        name: optionName(item),
+        category: item.category,
+        slot: item.slot,
+        type: item.type,
+        element: item.element,
+        levelRequired: item.levelRequired,
+        allowedArchetypes: item.allowedArchetypes,
+        hasRestriction: item.allowedArchetypes.length > 0,
+        hasArchetypeRestriction: item.allowedArchetypes.length > 0,
+        icon: item.icon
+      })),
+      artifacts: artifactRecords.map(value => {
+        const item = asRecord(value)
+        const option = compactRuntimeOption(item)
+        const parts = arrayOrEmpty(item.parts).map((partValue, index) => {
+          const part = asRecord(partValue)
+          return {
+            index: typeof part.index === 'number' ? part.index : index,
+            icon: readString(part.icon)
+          }
+        })
+        return {
+          ...option,
+          icon: option.icon || parts[0]?.icon || null,
+          parts,
+          partCount: parts.length
+        }
+      }),
+      gems: gemRecords.map(value => {
+        const item = asRecord(value)
+        const localizedAffix = asRecord(item.affix)
+        return {
+          ...compactRuntimeOption(item),
+          affix: Object.keys(localizedAffix).length
+            ? localized(item.affix)
+            : readString(item.runtimeAffix),
+          isBoss: item.isBoss === true
+        }
+      }),
+      cards: cardRecords.map(value => {
+        const item = asRecord(value)
+        return {
+          ...compactRuntimeOption(item),
+          equipClass: readString(item.equipClass),
+          unique: item.unique === true,
+          isBoss: item.isBoss === true
+        }
+      }),
+      equipmentSlots: EquipSlot.flatMap(sourceName => {
+        const value = equipSlotKeyByName[sourceName]
+        return value ? [{ value, sourceName }] : []
+      }),
+      artifactSlots: [...ArtifactSlot],
+      stances: [...StanceType],
+      statTypes: [...StatType],
+      metadata: {
+        skillTreeOwnership: 'user-confirmed',
+        equipmentRuntimeSlotsMeaning: 'unverified',
+        artifactPartSlotMapping: 'user-confirmed'
+      },
       difficulties: ['入门', '进阶', '专家']
     }
   })

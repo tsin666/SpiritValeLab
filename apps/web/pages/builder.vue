@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { Build, BuilderOption, BuilderOptions } from '~/composables/useApi'
+import type { Build, BuilderOption, BuilderOptions, Equipment, EquipmentListResponse, EquipmentValue } from '~/composables/useApi'
 import { localizedText } from '~/composables/useApi'
 
 const api = useApi()
 const route = useRoute()
 const { t, locale } = useI18n()
-const { gameText, difficultyText, categoryText, slotText, typeText } = useGameLocale()
+const { gameText, difficultyText, categoryText, slotText, typeText, statText } = useGameLocale()
 const localePath = useLocalePath()
 const maxTags = 10
 const maxGuideSteps = 20
@@ -25,16 +25,40 @@ const guideInput = ref('')
 const selectedSkills = ref<string[]>([])
 const selectedEquipment = ref<string[]>([])
 const skillSearch = ref('')
+const equipmentSearchInput = ref('')
 const equipmentSearch = ref('')
 const equipmentCategory = ref('')
+const selectedEquipmentDetails = ref<Record<string, Equipment>>({})
 const submitting = ref(false)
 const submitError = ref('')
 const compatibilityNotice = ref('')
 
-const optionName = (item?: BuilderOption | null) => gameText(item?.name, item?.displayName || item?.id || t('builder.unnamedEntry'))
+const optionName = (item?: BuilderOption | Equipment | null) => gameText(item?.name, item?.displayName || item?.id || t('builder.unnamedEntry'))
 const selectedArchetype = computed(() => options.value.archetypes.find(item => item.id === archetype.value || item.slug === archetype.value))
 const selectedSkillItems = computed(() => selectedSkills.value.map(id => options.value.skills.find(item => item.id === id)).filter(Boolean) as BuilderOption[])
-const selectedEquipmentItems = computed(() => selectedEquipment.value.map(id => options.value.equipment.find(item => item.id === id)).filter(Boolean) as BuilderOption[])
+const equipmentQuery = computed(() => ({
+  ...(equipmentSearch.value.trim() ? { q: equipmentSearch.value.trim() } : {}),
+  ...(equipmentCategory.value ? { category: equipmentCategory.value } : {}),
+  ...(archetype.value ? { archetype: archetype.value, compatible: 'true' } : {}),
+  pageSize: 80
+}))
+const emptyEquipmentResponse = (): EquipmentListResponse => ({
+  items: [], total: 0, page: 1, pageSize: 80, totalPages: 0,
+  facets: { categories: [], archetypes: [], slots: [], types: [], elements: [], levels: [], sets: [] }
+})
+const { data: equipmentResponse, status: equipmentStatus, error: equipmentError } = await useFetch<EquipmentListResponse>(`${api}/api/equipment`, {
+  query: equipmentQuery,
+  default: emptyEquipmentResponse,
+  watch: [equipmentQuery]
+})
+const equipmentById = computed(() => {
+  const entries = new Map<string, Equipment>()
+  for (const item of options.value.equipment) entries.set(item.id, item as Equipment)
+  for (const item of Object.values(selectedEquipmentDetails.value)) entries.set(item.id, item)
+  for (const item of equipmentResponse.value.items) entries.set(item.id, item)
+  return entries
+})
+const selectedEquipmentItems = computed(() => selectedEquipment.value.map(id => equipmentById.value.get(id)).filter(Boolean) as Equipment[])
 const tags = computed(() => [...new Set(tagsInput.value.split(/[,，\n]/).map(value => value.trim()).filter(Boolean))])
 const guide = computed(() => guideInput.value.split('\n').map(value => value.trim()).filter(Boolean))
 const tagsValidationError = computed(() => {
@@ -48,7 +72,11 @@ const guideValidationError = computed(() => {
   return ''
 })
 
-const equipmentCategories = computed(() => [...new Set(options.value.equipment.map(item => item.category).filter(Boolean) as string[])].sort((a,b) => a.localeCompare(b, locale.value)))
+const equipmentCategories = computed(() => {
+  const source = equipmentResponse.value.facets.categories.map(item => item.value)
+  const fallback = options.value.equipment.map(item => item.category).filter(Boolean) as string[]
+  return [...new Set([...source, ...fallback])].sort((a, b) => a.localeCompare(b, locale.value))
+})
 const filteredSkills = computed(() => {
   const term = skillSearch.value.trim().toLowerCase()
   return options.value.skills
@@ -56,13 +84,8 @@ const filteredSkills = computed(() => {
     .sort((left, right) => Number(isRecommended(right)) - Number(isRecommended(left)))
     .slice(0, 80)
 })
-const filteredEquipment = computed(() => {
-  const term = equipmentSearch.value.trim().toLowerCase()
-  return options.value.equipment.filter(item => {
-    const matchesTerm = !term || `${item.id} ${item.slug} ${optionName(item)} ${localizedText(item.name,'zh')} ${localizedText(item.name,'en')} ${item.slot || ''} ${item.type || ''}`.toLowerCase().includes(term)
-    return matchesArchetype(item) && matchesTerm && (!equipmentCategory.value || item.category === equipmentCategory.value)
-  }).slice(0, 80)
-})
+const filteredEquipment = computed(() => equipmentResponse.value.items)
+const equipmentResultCount = computed(() => equipmentResponse.value.total)
 
 const validation = computed(() => ({
   title: title.value.trim().length >= 2,
@@ -76,6 +99,7 @@ const validation = computed(() => ({
 }))
 const isValid = computed(() => Object.values(validation.value).every(Boolean))
 const contentLimitError = computed(() => tagsValidationError.value || guideValidationError.value)
+let equipmentSearchTimer: ReturnType<typeof setTimeout> | undefined
 
 function applyInitialArchetype() {
   if (archetype.value || !options.value.archetypes.length) return
@@ -87,6 +111,20 @@ watch(() => options.value.archetypes, applyInitialArchetype, { immediate: true }
 watch(() => options.value.difficulties, values => {
   if (values.length && !values.includes(difficulty.value)) difficulty.value = values[0]
 }, { immediate: true })
+watch(equipmentSearchInput, value => {
+  if (equipmentSearchTimer) clearTimeout(equipmentSearchTimer)
+  equipmentSearchTimer = setTimeout(() => { equipmentSearch.value = value }, 280)
+})
+watch(() => equipmentResponse.value.items, items => {
+  const remembered = { ...selectedEquipmentDetails.value }
+  for (const item of items) {
+    if (selectedEquipment.value.includes(item.id)) remembered[item.id] = item
+  }
+  selectedEquipmentDetails.value = remembered
+}, { immediate: true })
+onBeforeUnmount(() => {
+  if (equipmentSearchTimer) clearTimeout(equipmentSearchTimer)
+})
 watch(archetype, (next, previous) => {
   compatibilityNotice.value = ''
   if (!next || next === previous) return
@@ -118,7 +156,7 @@ function relationMatches(values: NonNullable<BuilderOption['allowedArchetypes']>
   })
 }
 
-function matchesArchetype(item: BuilderOption, target = selectedArchetype.value) {
+function matchesArchetype(item: BuilderOption | Equipment, target = selectedArchetype.value) {
   const allowed = item.allowedArchetypes || []
   const restricted = item.hasArchetypeRestriction ?? allowed.length > 0
   if (!target || !restricted || !allowed.length) return true
@@ -142,6 +180,54 @@ function toggle(kind: 'skills' | 'equipment', id: string, limit: number) {
   }
   submitError.value = ''
   list.value = [...list.value, id]
+}
+
+function toggleEquipment(item: Equipment) {
+  if (!selectedEquipment.value.includes(item.id)) {
+    selectedEquipmentDetails.value = { ...selectedEquipmentDetails.value, [item.id]: item }
+  }
+  toggle('equipment', item.id, 12)
+}
+
+function equipmentBaseStats(item: Equipment) {
+  const separated = [...(item.primaryStats || []), ...(item.secondaryStats || [])]
+  return separated.length ? separated : (item.stats || [])
+}
+
+function equipmentAffixes(item: Equipment) {
+  return item.availableAffixes || item.affixes || []
+}
+
+function attributeValue(entry: EquipmentValue) {
+  const value = entry.value ?? entry.description
+  if (value === null || value === undefined || value === '') return ''
+  if (typeof value !== 'object') return String(value)
+  const record = value as Record<string, unknown>
+  return [
+    record.base != null ? t('equipment.baseValue', { value: record.base }) : '',
+    record.perLevel != null && Number(record.perLevel) !== 0 ? t('equipment.perLevelValue', { value: record.perLevel }) : '',
+    typeof record.string === 'string' ? record.string : '',
+    typeof record.string2 === 'string' ? record.string2 : ''
+  ].filter(Boolean).join(' · ')
+}
+
+function entryLabel(entry: EquipmentValue) {
+  return statText(entry.type || entry.label || entry.name) || entry.label || entry.name || ''
+}
+
+function matchingAffixes(item: Equipment) {
+  const token = equipmentSearch.value.trim().toLocaleLowerCase('en-US')
+  if (!token) return []
+  return equipmentAffixes(item).filter(entry => JSON.stringify(entry).toLocaleLowerCase('en-US').includes(token))
+}
+
+function equipmentAffixPreview(item: Equipment) {
+  const matches = matchingAffixes(item)
+  return matches.length ? matches.slice(0, 2) : equipmentAffixes(item).slice(0, 1)
+}
+
+function equipmentSetName(item: Equipment) {
+  return gameText(item.set?.name, item.set?.displayName || '')
 }
 
 async function submitBuild() {
@@ -220,12 +306,13 @@ useSeoMeta({ title: () => t('builder.seoTitle'), description: () => t('builder.s
         <section class="builder-step">
           <header><span>03</span><div><h2>{{ t('builder.chooseEquipment') }}</h2><p>{{ t('builder.equipmentSelected', { count: selectedEquipment.length, max: 12 }) }}</p></div><button v-if="selectedEquipment.length" type="button" @click="selectedEquipment = []">{{ t('common.clear') }}</button></header>
           <p v-if="compatibilityNotice" class="builder-compatibility-notice" role="status">{{ compatibilityNotice }}</p>
-          <div class="builder-equipment-tools"><label class="builder-option-search"><span aria-hidden="true">⌕</span><input v-model="equipmentSearch" type="search" :placeholder="t('builder.equipmentSearchPlaceholder')"></label><select v-model="equipmentCategory" :aria-label="t('builder.equipmentCategory')"><option value="">{{ t('builder.allCategories') }}</option><option v-for="value in equipmentCategories" :key="value" :value="value">{{ categoryText(value) }}</option></select></div>
+          <div class="builder-equipment-tools"><label class="builder-option-search"><span aria-hidden="true">⌕</span><input v-model="equipmentSearchInput" type="search" :aria-label="t('builder.equipmentSearchAria')" :placeholder="t('builder.equipmentSearchPlaceholder')"></label><select v-model="equipmentCategory" :aria-label="t('builder.equipmentCategory')"><option value="">{{ t('builder.allCategories') }}</option><option v-for="value in equipmentCategories" :key="value" :value="value">{{ categoryText(value) }}</option></select></div>
+          <p class="builder-limit-note" role="status"><template v-if="equipmentStatus === 'pending'">{{ t('builder.equipmentLoading') }}</template><template v-else-if="equipmentError">{{ t('builder.equipmentLoadError') }}</template><template v-else>{{ t('builder.equipmentResultCount', { count: equipmentResultCount }) }}<template v-if="selectedArchetype"> · {{ t('builder.compatibleWithClass', { class: optionName(selectedArchetype) }) }}</template></template></p>
           <div v-if="filteredEquipment.length" class="builder-option-grid builder-option-grid--equipment">
-            <button v-for="item in filteredEquipment" :key="item.id" type="button" :class="{ selected: selectedEquipment.includes(item.id) }" :aria-pressed="selectedEquipment.includes(item.id)" @click="toggle('equipment',item.id,12)"><EquipmentIcon :item="item" size="small"/><span><strong>{{ optionName(item) }}</strong><small>{{ [slotText(item.slot),typeText(item.type)].filter(Boolean).join(' · ') || item.id }}</small></span><b>{{ selectedEquipment.includes(item.id) ? '✓' : '+' }}</b></button>
+            <button v-for="item in filteredEquipment" :key="item.id" type="button" :class="{ selected: selectedEquipment.includes(item.id) }" :aria-pressed="selectedEquipment.includes(item.id)" @click="toggleEquipment(item)"><EquipmentIcon :item="item" size="small"/><span><strong>{{ optionName(item) }}</strong><small>{{ [slotText(item.slot),typeText(item.type)].filter(Boolean).join(' · ') || item.id }}</small><small v-for="entry in equipmentBaseStats(item).slice(0, 2)" :key="`${item.id}-stat-${entryLabel(entry)}`" class="builder-equipment-fact"><b>{{ entryLabel(entry) }}</b><em v-if="attributeValue(entry)"> {{ attributeValue(entry) }}</em></small><small v-for="entry in equipmentAffixPreview(item)" :key="`${item.id}-affix-${entryLabel(entry)}`" class="builder-equipment-fact builder-equipment-fact--candidate" :class="{ 'builder-equipment-fact--matched': matchingAffixes(item).includes(entry) }"><i>{{ t('builder.possibleAffix') }}</i><b>{{ entryLabel(entry) }}</b><em v-if="attributeValue(entry)"> {{ attributeValue(entry) }}</em></small><small v-if="equipmentSetName(item)" class="builder-equipment-fact builder-equipment-fact--set"><i>{{ t('builder.equipmentSet') }}</i><b>{{ equipmentSetName(item) }}</b></small></span><b>{{ selectedEquipment.includes(item.id) ? '✓' : '+' }}</b></button>
           </div>
           <p v-else class="builder-no-options">{{ t('builder.noEquipment') }}</p>
-          <p v-if="options.equipment.length > filteredEquipment.length && !equipmentSearch && !equipmentCategory" class="builder-limit-note">{{ t('builder.equipmentLimitNote') }}</p>
+          <p v-if="equipmentResultCount > filteredEquipment.length" class="builder-limit-note">{{ t('builder.equipmentLimitNote', { count: filteredEquipment.length, total: equipmentResultCount }) }}</p>
         </section>
       </div>
 

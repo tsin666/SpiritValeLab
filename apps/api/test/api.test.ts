@@ -206,6 +206,13 @@ test('equipment full-text and enriched filters include affixes, archetypes, slot
         affixes: [{ id: 'stormcall', name: { en: 'Stormcall' } }],
         setBonuses: [{ pieces: 2, description: { en: 'Test bonus' } }]
       },
+      {
+        id: 'Warrior_Banner',
+        slug: 'warrior-banner',
+        name: { en: 'Warrior Banner' },
+        description: { en: 'A class-restricted test item.' },
+        allowedArchetypes: ['Warrior']
+      },
       { id: 'Plain Sword', slug: 'plain-sword', name: { en: 'Plain Sword' }, description: { en: 'Simple blade' } }
     ]
   })
@@ -224,6 +231,20 @@ test('equipment full-text and enriched filters include affixes, archetypes, slot
     assert.equal(filtered.json().total, 1)
     assert.equal(filtered.json().items[0].stats[0].value, 4)
     assert.equal(filtered.json().facets.sets[0].value, 'tempest-set')
+
+    const strictArchetype = await enrichedApp.inject({ method: 'GET', url: '/api/equipment?archetype=mage' })
+    assert.equal(strictArchetype.statusCode, 200)
+    assert.deepEqual(strictArchetype.json().items.map((item: any) => item.slug), ['mage-relic'])
+
+    const compatibleArchetype = await enrichedApp.inject({
+      method: 'GET',
+      url: '/api/equipment?archetype=mage&compatible=true'
+    })
+    assert.equal(compatibleArchetype.statusCode, 200)
+    assert.deepEqual(
+      compatibleArchetype.json().items.map((item: any) => item.slug).sort(),
+      ['mage-relic', 'plain-sword']
+    )
   } finally {
     await enrichedApp.close()
   }

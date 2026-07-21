@@ -60,6 +60,7 @@ export type EquipmentQuery = {
   q?: string
   category?: EquipmentCategory
   archetype?: string
+  compatible?: boolean
   slot?: string
   type?: string
   element?: string
@@ -264,7 +265,11 @@ function filterEquipment(index: IndexedEquipment[], query: EquipmentQuery, omit?
   return index.filter(({ item, searchText }) => {
     if (!matchesQuery(searchText, query.q)) return false
     if (omit !== 'category' && query.category && item.category !== query.category) return false
-    if (omit !== 'archetype' && query.archetype && !item.allowedArchetypes.some(value => canonical(value) === canonical(query.archetype!))) return false
+    if (omit !== 'archetype' && query.archetype) {
+      const explicitlyAllowed = item.allowedArchetypes.some(value => canonical(value) === canonical(query.archetype!))
+      const unrestricted = item.allowedArchetypes.length === 0
+      if (query.compatible ? !unrestricted && !explicitlyAllowed : !explicitlyAllowed) return false
+    }
     if (omit !== 'slot' && query.slot && !item.slots.some(slot => equalsFacet(slot, query.slot))) return false
     if (omit !== 'type' && !equalsFacet(item.type, query.type)) return false
     if (omit !== 'element' && !equalsFacet(item.element, query.element)) return false

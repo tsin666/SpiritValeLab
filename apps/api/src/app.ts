@@ -57,6 +57,7 @@ const equipmentQuerySchema = z.object({
   q: z.string().trim().max(100).optional(),
   category: z.enum(equipmentCategories).optional(),
   archetype: z.string().trim().min(1).max(80).optional(),
+  compatible: z.enum(['true', 'false']).transform(value => value === 'true').optional(),
   slot: z.string().trim().min(1).max(80).optional(),
   type: z.string().trim().min(1).max(80).optional(),
   element: z.string().trim().min(1).max(80).optional(),

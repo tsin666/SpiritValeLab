@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@fastify/cors": "latest",
+    "@fastify/rate-limit": "11.1.0",
     "dotenv": "latest",
     "fastify": "latest",
     "fuse.js": "7.5.0",

@@ -1,5 +1,6 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
+import rateLimit from '@fastify/rate-limit'
 import { ZodError, z } from 'zod'
 import catalog from '../../../packages/game-data/src/catalog.json' with { type: 'json' }
 import {
@@ -41,6 +42,7 @@ import {
   runtimeRecordsForKind,
   type RuntimeCatalogKind
 } from './runtime-data.js'
+import { createOcrCatalogMatcher, ocrCatalogKinds, type OcrCatalogSources } from './ocr/catalog-matcher.js'
 
 const catalogKinds = runtimeCatalogKinds
 const searchSchema = z.object({
@@ -88,6 +90,16 @@ const equipmentSelectionSchema = z.object({
   id: z.string().trim().min(1).max(120),
   slot: z.string().trim().min(1).max(50).optional()
 }).strict()
+const ocrMatchLineSchema = z.object({
+  id: z.string().trim().min(1).max(64).regex(/^[A-Za-z0-9_.:-]+$/),
+  text: z.string().trim().min(1).max(240),
+  kinds: z.array(z.enum(ocrCatalogKinds)).min(1).max(7).optional()
+}).strict()
+const ocrMatchSchema = z.object({
+  lines: z.array(ocrMatchLineSchema).min(1).max(64)
+    .refine(lines => new Set(lines.map(line => line.id)).size === lines.length, { message: 'OCR line ids must be unique' }),
+  maxCandidates: z.number().int().min(1).max(5).default(5)
+}).strict()
 const hasUniqueSelectionIds = (items: Array<{ id: string }>) => new Set(items.map(item => canonical(item.id))).size === items.length
 const createBuildSchema = z.object({
   slug: z.string().trim().min(2).max(120).regex(/^[a-z0-9][a-z0-9-]*$/).optional(),
@@ -109,6 +121,7 @@ export type BuildAppOptions = {
   equipmentRecords?: readonly unknown[]
   archetypeRecords?: readonly unknown[]
   skillRecords?: readonly unknown[]
+  ocrCatalogSources?: OcrCatalogSources
 }
 
 type BuildSummary = {
@@ -296,6 +309,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
   const allowedOrigins = process.env.CORS_ORIGIN?.split(',').map(value => value.trim()).filter(Boolean)
     || ['http://127.0.0.1:3000', 'http://localhost:3000']
   await app.register(cors, { origin: allowedOrigins })
+  await app.register(rateLimit, { global: false })
   await connectServices()
   const equipmentIndex = createEquipmentCatalog(options.equipmentRecords || runtimeEquipmentRecords)
   const archetypeIndex = createArchetypeCatalog(options.archetypeRecords || runtimeArchetypeRecords)
@@ -305,6 +319,15 @@ export async function buildApp(options: BuildAppOptions = {}) {
     ? listEquipment(equipmentIndex, { page: 1, pageSize: 100 }).items
     : equipmentIndex.map(entry => entry.item)
   const allArchetypes = listArchetypes(archetypeIndex, { page: 1, pageSize: 100 }).items
+  const ocrCatalogMatcher = createOcrCatalogMatcher({
+    archetype: options.ocrCatalogSources?.archetype ?? allArchetypes,
+    skill: options.ocrCatalogSources?.skill ?? skillCatalog,
+    equipment: options.ocrCatalogSources?.equipment ?? allEquipment,
+    skillPassive: options.ocrCatalogSources?.skillPassive ?? runtimeRecordsForKind('skillPassives'),
+    artifact: options.ocrCatalogSources?.artifact ?? runtimeRecordsForKind('artifacts'),
+    gem: options.ocrCatalogSources?.gem ?? runtimeRecordsForKind('gems'),
+    card: options.ocrCatalogSources?.card ?? runtimeRecordsForKind('cards')
+  })
   const recommendedArchetypesBySkill = new Map<string, string[]>()
   for (const archetype of allArchetypes) {
     for (const skillId of archetype.previewSkills) {
@@ -321,6 +344,19 @@ export async function buildApp(options: BuildAppOptions = {}) {
     }
     if (error instanceof DuplicateBuildSlugError) {
       return reply.code(409).send({ error: 'Build slug already exists', code: 'BUILD_SLUG_EXISTS', slug: error.slug })
+    }
+    const clientError = error !== null && typeof error === 'object'
+      ? error as { statusCode?: unknown; code?: unknown; message?: unknown }
+      : null
+    if (typeof clientError?.statusCode === 'number' && clientError.statusCode >= 400 && clientError.statusCode < 500) {
+      const body = clientError.statusCode === 413
+        ? { error: 'Request body is too large', code: 'BODY_TOO_LARGE' }
+        : clientError.statusCode === 415
+          ? { error: 'Unsupported media type', code: 'UNSUPPORTED_MEDIA_TYPE' }
+          : clientError.statusCode === 429
+            ? { error: 'Too many requests', code: 'RATE_LIMITED' }
+            : { error: 'Invalid request', code: 'REQUEST_ERROR' }
+      return reply.code(clientError.statusCode).send(body)
     }
     app.log.error(error)
     return reply.code(500).send({ error: 'Internal server error', code: 'INTERNAL_ERROR' })
@@ -456,6 +492,22 @@ export async function buildApp(options: BuildAppOptions = {}) {
     const result = await toggleBuildLike(slug, visitorId)
     if (!result) return reply.code(404).send({ error: 'Build not found', code: 'BUILD_NOT_FOUND' })
     return result
+  })
+
+  app.post('/api/ocr/match', {
+    bodyLimit: 32 * 1024,
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } }
+  }, async request => {
+    const input = ocrMatchSchema.parse(request.body)
+    return {
+      source: 'text-only',
+      reviewRequired: true,
+      selectionsAccepted: false,
+      lines: input.lines.map(line => ({
+        lineId: line.id,
+        ...ocrCatalogMatcher.match(line.text, { kinds: line.kinds, maxCandidates: input.maxCandidates })
+      }))
+    }
   })
 
   app.get('/api/equipment', async request => {

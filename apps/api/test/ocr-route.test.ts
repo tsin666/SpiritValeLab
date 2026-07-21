@@ -33,6 +33,7 @@ test('OCR matcher accepts text only, returns all catalog kinds, and always requi
       { id: 'skill', text: 'Aegis of Light' },
       { id: 'skillPassive', text: 'Scripture of Mercy' },
       { id: 'equipment', text: '3D Glasses' },
+      { id: 'grimoire', text: 'Hidden Strikes', kinds: ['grimoire'] },
       { id: 'artifact', text: 'Holy Vow' },
       { id: 'gem', text: 'Aerial Shot Gem' },
       { id: 'card', text: 'Abomination Card' }
@@ -50,11 +51,11 @@ test('OCR matcher accepts text only, returns all catalog kinds, and always requi
   assert.equal(body.reviewRequired, true)
   assert.equal(body.selectionsAccepted, false)
   assert.deepEqual(body.lines.map(line => line.lineId), [
-    'archetype', 'skill', 'skillPassive', 'equipment', 'artifact', 'gem', 'card'
+    'archetype', 'skill', 'skillPassive', 'equipment', 'grimoire', 'artifact', 'gem', 'card'
   ])
   assert.deepEqual(
     body.lines.map(line => line.candidates[0]?.kind),
-    ['archetype', 'skill', 'skillPassive', 'equipment', 'artifact', 'gem', 'card']
+    ['archetype', 'skill', 'skillPassive', 'equipment', 'grimoire', 'artifact', 'gem', 'card']
   )
   assert.ok(body.lines.every(line => line.candidates.length > 0 && line.candidates[0]?.matchType === 'exact'))
   assert.equal(body.lines.find(line => line.lineId === 'skillPassive')?.status, 'ambiguous')
@@ -99,6 +100,21 @@ test('OCR matcher preserves real Acolyte ambiguity, supports kind narrowing, and
   assert.equal(unmatched.statusCode, 200)
   assert.equal((unmatched.json().lines as OcrLine[])[0]?.status, 'unmatched')
   assert.deepEqual((unmatched.json().lines as OcrLine[])[0]?.candidates, [])
+
+  const grimoireVsEquipment = await app.inject({
+    method: 'POST',
+    url: '/api/ocr/match',
+    payload: validBody([
+      { id: 'grimoire-only', text: 'Hidden Strikes', kinds: ['grimoire'] },
+      { id: 'equipment-only', text: 'Hidden Strikes', kinds: ['equipment'] }
+    ])
+  })
+  assert.equal(grimoireVsEquipment.statusCode, 200)
+  const [grimoireOnly, equipmentOnly] = grimoireVsEquipment.json().lines as OcrLine[]
+  assert.equal(grimoireOnly?.status, 'suggested')
+  assert.deepEqual(grimoireOnly?.candidates.map(candidate => [candidate.kind, candidate.id]), [['grimoire', 'Rogue_5']])
+  assert.equal(equipmentOnly?.status, 'unmatched')
+  assert.deepEqual(equipmentOnly?.candidates, [])
 })
 
 test('OCR matcher uses the custom buildApp resource directories', async () => {
@@ -107,6 +123,7 @@ test('OCR matcher uses the custom buildApp resource directories', async () => {
     ['skill', 'FixtureSkill', 'Fixture Skill'],
     ['skillPassive', 'FixturePassive', 'Fixture Passive'],
     ['equipment', 'FixtureEquipment', 'Fixture Equipment'],
+    ['grimoire', 'FixtureGrimoire', 'Fixture Grimoire'],
     ['artifact', 'FixtureArtifact', 'Fixture Artifact'],
     ['gem', 'FixtureGem', 'Fixture Gem'],
     ['card', 'FixtureCard', 'Fixture Card']
@@ -139,6 +156,7 @@ test('OCR matcher uses the custom buildApp resource directories', async () => {
         { id: 'runtime-skill', text: 'Aegis of Light' },
         { id: 'runtime-passive', text: 'Scripture of Mercy' },
         { id: 'runtime-equipment', text: '3D Glasses' },
+        { id: 'runtime-grimoire', text: 'Hidden Strikes' },
         { id: 'runtime-artifact', text: 'Holy Vow' },
         { id: 'runtime-gem', text: 'Aerial Shot Gem' },
         { id: 'runtime-card', text: 'Abomination Card' }
@@ -165,7 +183,7 @@ test('OCR matcher rejects image-like payloads and all invalid text-only input bo
     validBody([{ id: 'one', text: 'x'.repeat(241) }]),
     validBody([{ id: 'one', text: 'Paladin', kinds: [] }]),
     validBody([{ id: 'one', text: 'Paladin', kinds: ['not-a-kind'] }]),
-    validBody([{ id: 'one', text: 'Paladin', kinds: Array.from({ length: 8 }, () => 'archetype') }]),
+    validBody([{ id: 'one', text: 'Paladin', kinds: Array.from({ length: 9 }, () => 'archetype') }]),
     validBody([{ id: 'same', text: 'Paladin' }, { id: ' same ', text: 'Aegis of Light' }]),
     validBody(Array.from({ length: 65 }, (_, index) => ({ id: `line-${index}`, text: 'Paladin' }))),
     { ...validBody(), maxCandidates: 0 },

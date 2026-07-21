@@ -31,7 +31,11 @@ test('equipment compatibility, class detail and build validation follow advancem
     archetypeRecords: [
       'Rogue', 'Shinobi', 'Assassin', 'Mage', 'Wizard', 'Chronomancer'
     ].map(id => ({ id, slug: id.toLowerCase(), name: { en: id } })),
-    skillRecords: [{ id: 'Practice', slug: 'practice', name: { en: 'Practice' }, description: { en: 'Test skill' } }],
+    skillRecords: [
+      { id: 'Practice', slug: 'practice', name: { en: 'Practice' }, description: { en: 'Test skill' } },
+      { id: 'ShadowStep', slug: 'shadowstep', name: { en: 'Shadow Step' }, allowedArchetypes: ['Rogue'] },
+      { id: 'Assassin Practice', slug: 'assassin-practice', name: { en: 'Assassin Practice' }, allowedArchetypes: ['Assassin'] }
+    ],
     equipmentRecords: [
       { id: 'Rogue Dagger', slug: 'rogue-dagger', name: { en: 'Rogue Dagger' }, allowedArchetypes: ['Rogue'] },
       { id: 'Shinobi Kunai', slug: 'shinobi-kunai', name: { en: 'Shinobi Kunai' }, allowedArchetypes: ['Shinobi'] },
@@ -45,13 +49,13 @@ test('equipment compatibility, class detail and build validation follow advancem
   await lineageApp.ready()
 
   const names = (response: { json: () => { items: Array<{ slug: string }> } }) => response.json().items.map(item => item.slug).sort()
-  const buildPayload = (slug: string, archetype: string, equipment: string) => ({
+  const buildPayload = (slug: string, archetype: string, equipment: string, skill = 'Practice') => ({
     slug,
     title: `${archetype} lineage test`,
     archetype,
     difficulty: '入门',
     summary: 'Verifies advancement equipment compatibility.',
-    skills: [{ id: 'Practice' }],
+    skills: [{ id: skill }],
     equipment: [{ id: equipment }]
   })
 
@@ -82,12 +86,27 @@ test('equipment compatibility, class detail and build validation follow advancem
     const chronomancerBase = await lineageApp.inject({ method: 'POST', url: '/api/builds', payload: buildPayload('lineage-chronomancer-base', 'Chronomancer', 'Mage Tome') })
     assert.equal(chronomancerBase.statusCode, 201)
 
+    const shinobiBaseSkill = await lineageApp.inject({
+      method: 'POST',
+      url: '/api/builds',
+      payload: buildPayload('lineage-shinobi-base-skill', 'Shinobi', 'Rogue Dagger', 'ShadowStep')
+    })
+    assert.equal(shinobiBaseSkill.statusCode, 201)
+    assert.equal(shinobiBaseSkill.json().skills[0].id, 'ShadowStep')
+
     const reverse = await lineageApp.inject({ method: 'POST', url: '/api/builds', payload: buildPayload('lineage-rogue-reverse', 'Rogue', 'Shinobi Kunai') })
     assert.equal(reverse.statusCode, 400)
     assert.equal(reverse.json().code, 'EQUIPMENT_ARCHETYPE_MISMATCH')
     const sibling = await lineageApp.inject({ method: 'POST', url: '/api/builds', payload: buildPayload('lineage-shinobi-sibling', 'Shinobi', 'Assassin Dagger') })
     assert.equal(sibling.statusCode, 400)
     assert.equal(sibling.json().code, 'EQUIPMENT_ARCHETYPE_MISMATCH')
+    const siblingSkill = await lineageApp.inject({
+      method: 'POST',
+      url: '/api/builds',
+      payload: buildPayload('lineage-shinobi-sibling-skill', 'Shinobi', 'Rogue Dagger', 'Assassin Practice')
+    })
+    assert.equal(siblingSkill.statusCode, 400)
+    assert.equal(siblingSkill.json().code, 'SKILL_ARCHETYPE_MISMATCH')
     const mageReverse = await lineageApp.inject({ method: 'POST', url: '/api/builds', payload: buildPayload('lineage-mage-reverse', 'Mage', 'Wizard Tome') })
     assert.equal(mageReverse.statusCode, 400)
     assert.equal(mageReverse.json().code, 'EQUIPMENT_ARCHETYPE_MISMATCH')

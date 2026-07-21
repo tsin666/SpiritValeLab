@@ -198,7 +198,7 @@ const grimoireSelectionSchema = z.object({
 const ocrMatchLineSchema = z.object({
   id: z.string().trim().min(1).max(64).regex(/^[A-Za-z0-9_.:-]+$/),
   text: z.string().trim().min(1).max(240),
-  kinds: z.array(z.enum(ocrCatalogKinds)).min(1).max(7).optional()
+  kinds: z.array(z.enum(ocrCatalogKinds)).min(1).max(ocrCatalogKinds.length).optional()
 }).strict()
 const ocrMatchSchema = z.object({
   lines: z.array(ocrMatchLineSchema).min(1).max(64)
@@ -594,12 +594,14 @@ export async function buildApp(options: BuildAppOptions = {}) {
   const artifactById = runtimeSelectionMap(artifactRecords)
   const gemById = runtimeSelectionMap(gemRecords)
   const cardById = runtimeSelectionMap(cardRecords)
-  const grimoireEquipment = allEquipment.filter(item => canonical(item.type || '') === canonical('Grimoire'))
-  const grimoireEquipmentById = selectionMap(grimoireEquipment)
+  const grimoireRecords = allEquipment.filter(item => canonical(item.type || '') === canonical('Grimoire'))
+  const regularEquipmentRecords = allEquipment.filter(item => canonical(item.type || '') !== canonical('Grimoire'))
+  const grimoireEquipmentById = selectionMap(grimoireRecords)
   const ocrCatalogMatcher = createOcrCatalogMatcher({
     archetype: options.ocrCatalogSources?.archetype ?? allArchetypes,
     skill: options.ocrCatalogSources?.skill ?? skillCatalog,
-    equipment: options.ocrCatalogSources?.equipment ?? allEquipment,
+    equipment: options.ocrCatalogSources?.equipment ?? regularEquipmentRecords,
+    grimoire: options.ocrCatalogSources?.grimoire ?? grimoireRecords,
     skillPassive: options.ocrCatalogSources?.skillPassive ?? skillPassiveRecords,
     artifact: options.ocrCatalogSources?.artifact ?? artifactRecords,
     gem: options.ocrCatalogSources?.gem ?? gemRecords,
@@ -714,7 +716,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
     for (const selection of input.skills) {
       const skill = skillsById.get(canonical(selection.id))
       if (!skill) return reply.code(400).send({ error: 'Unknown skill', code: 'UNKNOWN_SKILL', value: selection.id })
-      if (skill.allowedArchetypes.length && !skill.allowedArchetypes.some(value => canonical(value) === canonical(archetype.id))) {
+      if (skill.allowedArchetypes.length && !skill.allowedArchetypes.some(value => inheritsArchetype(archetype.id, value))) {
         return reply.code(400).send({ error: 'Skill is not available to this archetype', code: 'SKILL_ARCHETYPE_MISMATCH', value: selection.id })
       }
       selectedSkills.push(skill)
@@ -1144,7 +1146,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
       equipmentSets: runtimeEquipmentSetRecords
         .map(equipmentSetSnapshot)
         .filter((item): item is Record<string, unknown> => Boolean(item)),
-      grimoires: grimoireEquipment.map(item => ({
+      grimoires: grimoireRecords.map(item => ({
         id: item.id,
         slug: item.slug,
         name: optionName(item),

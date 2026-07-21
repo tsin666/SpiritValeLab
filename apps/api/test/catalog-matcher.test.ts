@@ -11,6 +11,7 @@ const completeCatalog: OcrCatalogSources = {
   skill: [{ id: 'Whirlwind', slug: 'whirlwind', displayName: 'Whirlwind', name: { en: 'Whirlwind', zh: '旋风斩' } }],
   skillPassive: [{ id: 'IronWill', slug: 'iron-will', displayName: 'Iron Will', name: { en: 'Iron Will', zh: '钢铁意志' } }],
   equipment: [{ id: 'ArcaneSigil', slug: 'arcane-sigil', displayName: 'Arcane Sigil', name: { en: 'Arcane Sigil', zh: '奥术印记' } }],
+  grimoire: [{ id: 'HiddenStrikes', slug: 'hidden-strikes', displayName: 'Hidden Strikes', name: { en: 'Hidden Strikes' } }],
   artifact: [{ id: 'AstralPrism', slug: 'astral-prism', displayName: 'Astral Prism', name: { en: 'Astral Prism', zh: '星界棱镜' } }],
   gem: [{ id: 'AerialShotGem', slug: 'aerial-shot-gem', displayName: 'Aerial Shot Gem', name: { en: 'Aerial Shot Gem', zh: '空中射击宝石' } }],
   card: [{ id: 'Abomination', slug: 'abomination', displayName: 'Abomination', name: { en: 'Abomination', zh: '憎恶卡片' } }]
@@ -28,12 +29,13 @@ test('indexes and exactly matches every supported catalog kind', () => {
     ['旋风斩', 'skill'],
     ['iron-will', 'skillPassive'],
     ['ＡＲＣＡＮＥ—ＳＩＧＩＬ', 'equipment'],
+    ['Hidden Strikes', 'grimoire'],
     ['星界棱镜', 'artifact'],
     ['aerial shot gem', 'gem'],
     ['Abomination', 'card']
   ] as const
 
-  assert.equal(matcher.size, 7)
+  assert.equal(matcher.size, 8)
   for (const [query, kind] of queries) {
     const result = matcher.match(query)
     assert.equal(result.status, 'suggested', query)
@@ -143,11 +145,19 @@ test('produces deterministic ordering regardless of source record order', () => 
 
 test('indexes the current SpiritVale runtime catalogs and preserves real collisions', async () => {
   const { runtimeRecordsForKind } = await import('../src/runtime-data.js')
+  const equipmentRecords = runtimeRecordsForKind('equips')
+  const grimoireRecords = equipmentRecords.filter(value =>
+    String((value as { type?: unknown }).type || '').toLocaleLowerCase('en-US') === 'grimoire'
+  )
+  const regularEquipmentRecords = equipmentRecords.filter(value =>
+    String((value as { type?: unknown }).type || '').toLocaleLowerCase('en-US') !== 'grimoire'
+  )
   const matcher = createOcrCatalogMatcher({
     archetype: runtimeRecordsForKind('archetypes'),
     skill: runtimeRecordsForKind('skills'),
     skillPassive: runtimeRecordsForKind('skillPassives'),
-    equipment: runtimeRecordsForKind('equips'),
+    equipment: regularEquipmentRecords,
+    grimoire: grimoireRecords,
     artifact: runtimeRecordsForKind('artifacts'),
     gem: runtimeRecordsForKind('gems'),
     card: runtimeRecordsForKind('cards')
@@ -158,7 +168,8 @@ test('indexes the current SpiritVale runtime catalogs and preserves real collisi
     archetype: 31,
     skill: 279,
     skillPassive: 111,
-    equipment: 647,
+    equipment: 576,
+    grimoire: 71,
     artifact: 45,
     gem: 129,
     card: 327
@@ -177,4 +188,14 @@ test('indexes the current SpiritVale runtime catalogs and preserves real collisi
   assert.equal(enhancedEquipment.candidates[0]?.id, 'ThiefFeet')
   assert.equal(enhancedEquipment.candidates[0]?.displayName, 'Ashwalker Shoes')
   assert.equal(enhancedEquipment.candidates[0]?.matchedAlias, 'Ashwalker Shoes')
+
+  const professionGrimoire = matcher.match('Hidden Strikes', { kinds: ['grimoire'] })
+  assert.equal(professionGrimoire.status, 'suggested')
+  assert.equal(professionGrimoire.candidates[0]?.kind, 'grimoire')
+  assert.equal(professionGrimoire.candidates[0]?.id, 'Rogue_5')
+  assert.equal(professionGrimoire.candidates[0]?.matchType, 'exact')
+
+  const regularEquipmentOnly = matcher.match('Hidden Strikes', { kinds: ['equipment'] })
+  assert.equal(regularEquipmentOnly.status, 'unmatched')
+  assert.deepEqual(regularEquipmentOnly.candidates, [])
 })

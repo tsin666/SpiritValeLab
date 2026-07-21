@@ -5,6 +5,7 @@ export const ocrCatalogKinds = [
   'skill',
   'skillPassive',
   'equipment',
+  'grimoire',
   'artifact',
   'gem',
   'card'

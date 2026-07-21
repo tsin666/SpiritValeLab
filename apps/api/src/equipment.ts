@@ -57,6 +57,179 @@ type IndexedEquipment = {
   searchText: string
 }
 
+function readonlyAliasMap<T extends Record<string, readonly string[]>>(aliases: T): Readonly<T> {
+  for (const values of Object.values(aliases)) Object.freeze(values)
+  return Object.freeze(aliases)
+}
+
+// Search-only labels for every effect type currently present in the 647 runtime
+// equipment records. The first alias is the primary Chinese label; the remaining
+// aliases are common Chinese/English search phrases. Source records stay untouched.
+export const equipmentEffectSearchAliases = readonlyAliasMap({
+  aftercastdelay: ['施法后延迟', '施法后摇', 'after cast delay', 'post cast delay'],
+  agi: ['敏捷', 'agility', 'agi'],
+  allresist: ['全抗性', '全元素抗性', 'all resistance', 'all resistances'],
+  allstats: ['全属性', 'all stats', 'all attributes'],
+  atk: ['物理攻击', '攻击力', 'physical attack', 'attack power'],
+  atkmult: ['攻击倍率', '物理攻击倍率', 'attack multiplier', 'physical attack multiplier'],
+  atkspd: ['攻击速度', '攻速', 'attack speed'],
+  atkspdlimit: ['攻击速度上限', '攻速上限', 'attack speed limit', 'attack speed cap'],
+  autoattackmatk: ['普攻魔法攻击', '普通攻击魔攻', 'auto attack magic attack', 'basic attack magic attack'],
+  autocastattack: ['攻击时自动施法', '攻击触发施法', 'autocast on attack', 'auto cast on attack'],
+  autocasthit: ['命中时自动施法', '命中触发施法', 'autocast on hit', 'auto cast on hit'],
+  block: ['格挡', '格挡率', 'block', 'block chance'],
+  buffduration: ['增益持续时间', '增益时长', 'buff duration'],
+  castrange: ['施法距离', '施法范围', 'cast range', 'casting range'],
+  castspd: ['施法速度', '吟唱速度', 'cast speed', 'casting speed'],
+  chain: ['连锁', '连锁次数', 'chain', 'chain count'],
+  cooldownrecovery: ['冷却恢复速度', '冷却恢复', 'cooldown recovery', 'cooldown recovery rate'],
+  crit: ['暴击', '暴击率', 'critical chance', 'crit chance'],
+  critdamage: ['暴击伤害', '爆伤', 'critical damage', 'crit damage'],
+  critdef: ['暴击抗性', '暴击防御', 'critical resistance', 'critical defense'],
+  critmult: ['暴击率倍率', '暴击倍率', 'critical chance multiplier', 'crit multiplier'],
+  damagecloserange: ['近距离伤害', '近程伤害', 'close range damage', 'close-range damage'],
+  damageelement: ['伤害元素', '伤害属性', 'damage element', 'damage type element'],
+  damagefarrange: ['远距离伤害', '远程距离伤害', 'far range damage', 'long range damage'],
+  damagefromelement: ['承受元素伤害', '受到的元素伤害', 'damage taken from element', 'damage from element'],
+  damagefrommagic: ['承受魔法伤害', '受到的魔法伤害', 'magic damage taken', 'damage from magic'],
+  damagefrommelee: ['承受近战伤害', '受到的近战伤害', 'melee damage taken', 'damage from melee'],
+  damagefromranged: ['承受远程伤害', '受到的远程伤害', 'ranged damage taken', 'damage from ranged'],
+  damagemagic: ['魔法伤害', 'magic damage'],
+  damagemelee: ['近战伤害', 'melee damage'],
+  damageranged: ['远程伤害', 'ranged damage'],
+  damagestatus: ['状态伤害', '异常状态伤害', 'status damage', 'ailment damage'],
+  damagetoelement: ['对元素伤害', '对属性伤害', 'damage to element', 'elemental target damage'],
+  def: ['物理防御', '防御力', 'physical defense', 'defense'],
+  defflat: ['固定物理防御', '物理防御固定值', 'flat physical defense', 'flat defense'],
+  defmult: ['物理防御倍率', '防御倍率', 'physical defense multiplier', 'defense multiplier'],
+  defpierce: ['物理防御穿透', '物防穿透', 'physical defense penetration', 'defense penetration'],
+  dex: ['灵巧', 'dexterity', 'dex'],
+  doubleattack: ['双重攻击', '二连击', 'double attack'],
+  elementarmor: ['护甲元素', '元素护甲', 'armor element', 'elemental armor'],
+  elementresist: ['元素抗性', '属性抗性', 'element resistance', 'elemental resistance'],
+  flee: ['闪避', '闪避率', 'evasion', 'dodge chance'],
+  fleemult: ['闪避倍率', 'evasion multiplier', 'flee multiplier'],
+  grantskill: ['赋予技能', '获得技能', 'granted skill', 'grant skill'],
+  healing: ['治疗效果', '治疗', 'healing', 'healing power'],
+  healingreceived: ['受到的治疗', '受治疗效果', 'healing received', 'incoming healing'],
+  hit: ['命中', '命中率', 'hit', 'hit chance'],
+  hitmult: ['命中倍率', 'hit multiplier', 'accuracy multiplier'],
+  hp: ['生命', '生命值', 'health', 'hit points'],
+  hpmult: ['生命倍率', '生命值倍率', 'health multiplier', 'hp multiplier'],
+  hpregen: ['生命恢复', '生命回复', 'health regeneration', 'hp regeneration'],
+  hpregenmax: ['生命恢复上限', '生命回复上限', 'maximum health regeneration', 'hp regeneration cap'],
+  hpregenmult: ['生命恢复倍率', '生命回复倍率', 'health regeneration multiplier', 'hp regeneration multiplier'],
+  int: ['智力', 'intelligence', 'int'],
+  leech: ['吸取', '生命吸取', 'leech', 'life leech'],
+  leechkill: ['击杀恢复生命', '击杀生命吸取', 'health on kill', 'life on kill'],
+  leechkillmp: ['击杀恢复法力', '击杀法力吸取', 'mana on kill', 'mp on kill'],
+  luk: ['幸运', 'luck', 'luk'],
+  matk: ['魔法攻击', '魔攻', 'magic attack', 'magic power'],
+  matkmult: ['魔法攻击倍率', '魔攻倍率', 'magic attack multiplier', 'magic power multiplier'],
+  matkperstr: ['每点力量魔攻', '力量转魔攻', 'magic attack per strength', 'matk per strength'],
+  mdef: ['魔法防御', '魔防', 'magic defense'],
+  mdefflat: ['固定魔法防御', '魔法防御固定值', 'flat magic defense'],
+  mdefmult: ['魔法防御倍率', '魔防倍率', 'magic defense multiplier'],
+  mdefpierce: ['魔法防御穿透', '魔防穿透', 'magic defense penetration'],
+  movespd: ['移动速度', '移速', 'movement speed', 'move speed'],
+  mp: ['法力', '法力值', 'mana', 'magic points'],
+  mpcost: ['法力消耗', '耗蓝', 'mana cost', 'mp cost'],
+  mpmult: ['法力倍率', '法力值倍率', 'mana multiplier', 'mp multiplier'],
+  mpregen: ['法力恢复', '法力回复', 'mana regeneration', 'mp regeneration'],
+  mpregenmax: ['法力恢复上限', '法力回复上限', 'maximum mana regeneration', 'mp regeneration cap'],
+  mpregenmult: ['法力恢复倍率', '法力回复倍率', 'mana regeneration multiplier', 'mp regeneration multiplier'],
+  nocastcancel: ['施法不被打断', '免疫施法中断', 'uninterruptible casting', 'no cast cancel'],
+  noflinch: ['免疫硬直', '不会硬直', 'flinch immunity', 'no flinch'],
+  noknockback: ['免疫击退', '不会被击退', 'knockback immunity', 'no knockback'],
+  noreflect: ['无视反射', '不可被反射', 'ignore reflection', 'cannot be reflected'],
+  perfectcloak: ['完全隐身', '完美隐身', 'perfect cloak', 'true stealth'],
+  perfectdodge: ['完全闪避', '完美闪避', 'perfect dodge', 'guaranteed dodge'],
+  perfecthit: ['必定命中', '完美命中', 'perfect hit', 'guaranteed hit'],
+  range: ['攻击范围', '攻击距离', 'attack range'],
+  reflectdamage: ['伤害反射', '反伤', 'damage reflection', 'reflect damage'],
+  reflectspell: ['法术反射', '反射法术', 'spell reflection', 'reflect spell'],
+  siphonhp: ['汲取生命', '生命虹吸', 'health siphon', 'siphon health'],
+  siphonmp: ['汲取法力', '法力虹吸', 'mana siphon', 'siphon mana'],
+  skillarea: ['技能范围', '技能作用范围', 'skill area', 'skill area of effect'],
+  skillautocast: ['技能自动施法', '技能自动触发', 'skill autocast', 'automatic skill cast'],
+  skillcasttime: ['技能施法时间', '技能吟唱时间', 'skill cast time', 'skill casting time'],
+  skillchains: ['技能连锁次数', '技能连锁', 'skill chain count', 'skill chains'],
+  skillcharges: ['技能充能次数', '技能充能', 'skill charges', 'skill charge count'],
+  skillcooldown: ['技能冷却', '技能冷却时间', 'skill cooldown'],
+  skillcost: ['技能消耗', '技能法力消耗', 'skill cost', 'skill mana cost'],
+  skilldamage: ['技能伤害', 'skill damage'],
+  skillduration: ['技能持续时间', '技能时长', 'skill duration'],
+  skillhits: ['技能命中次数', '技能攻击次数', 'skill hit count', 'skill hits'],
+  skilllevel: ['技能等级', 'skill level'],
+  skillpiercing: ['技能穿透', '技能贯穿', 'skill piercing', 'skill penetration'],
+  skillremoveknockback: ['移除技能击退', '技能取消击退', 'remove skill knockback', 'skill removes knockback'],
+  skillremovestatus: ['移除技能状态效果', '技能取消状态', 'remove skill status', 'skill removes status'],
+  skillreplace: ['技能替换', '替换技能', 'skill replacement', 'replace skill'],
+  skillsplash: ['技能溅射', '技能范围溅射', 'skill splash', 'skill splash damage'],
+  spelldodge: ['法术闪避', '闪避法术', 'spell dodge', 'magic dodge'],
+  splash: ['溅射', '溅射伤害', 'splash', 'splash damage'],
+  statusimmune: ['状态免疫', '异常状态免疫', 'status immunity', 'ailment immunity'],
+  statusmaxstacks: ['状态最大层数', '状态叠加上限', 'maximum status stacks', 'status stack limit'],
+  str: ['力量', 'strength', 'str'],
+  summonallstats: ['召唤物全属性', '召唤单位全属性', 'summon all stats', 'summon all attributes'],
+  summonatkmult: ['召唤物攻击倍率', '召唤单位攻击倍率', 'summon attack multiplier'],
+  summonatkspd: ['召唤物攻击速度', '召唤单位攻速', 'summon attack speed'],
+  summonhealing: ['召唤物治疗效果', '召唤单位治疗', 'summon healing', 'summon healing power'],
+  summonhpmult: ['召唤物生命倍率', '召唤单位生命倍率', 'summon health multiplier', 'summon hp multiplier'],
+  summonmatkmult: ['召唤物魔法攻击倍率', '召唤单位魔攻倍率', 'summon magic attack multiplier'],
+  summonresist: ['召唤物抗性', '召唤单位抗性', 'summon resistance', 'summon resist'],
+  vit: ['体质', 'vitality', 'vit'],
+  weightlimit: ['负重上限', '最大负重', 'weight limit', 'carrying capacity']
+} as const)
+
+export function collectEquipmentEffectTypes(...sources: readonly unknown[]): readonly string[] {
+  const types = new Set<string>()
+  const visit = (value: unknown, depth: number): void => {
+    if (depth > 8 || value === null || value === undefined) return
+    if (Array.isArray(value)) {
+      for (const entry of value) visit(entry, depth + 1)
+      return
+    }
+    if (typeof value !== 'object') return
+    const record = value as Record<string, unknown>
+    if (typeof record.type === 'string' && record.type.trim()) types.add(record.type.trim())
+    for (const entry of Object.values(record)) visit(entry, depth + 1)
+  }
+  for (const source of sources) visit(source, 0)
+  return Object.freeze([...types].sort((left, right) => left.localeCompare(right, 'en')))
+}
+
+function collectEffectSearchTerms(value: unknown, terms: Set<string>, depth = 0): void {
+  if (depth > 8 || value === null || value === undefined) return
+  if (Array.isArray(value)) {
+    for (const entry of value) collectEffectSearchTerms(entry, terms, depth + 1)
+    return
+  }
+  if (typeof value === 'object') {
+    for (const entry of Object.values(value as Record<string, unknown>)) {
+      collectEffectSearchTerms(entry, terms, depth + 1)
+    }
+    return
+  }
+  if (typeof value !== 'string') return
+
+  if (/^[A-Za-z][A-Za-z0-9_-]*$/.test(value)) terms.add(humanize(value))
+  const identifier = canonical(value)
+  for (const [type, aliases] of Object.entries(equipmentEffectSearchAliases)) {
+    const suffix = identifier.slice(type.length)
+    if (identifier !== type && !(identifier.startsWith(type) && /^\d+$/.test(suffix))) continue
+    for (const alias of aliases) terms.add(alias)
+  }
+}
+
+function effectAliasSearchText(item: EquipmentRecord): string {
+  const terms = new Set<string>()
+  for (const source of [item.stats, item.affixes, item.availableAffixes, item.setBonuses]) {
+    collectEffectSearchTerms(source, terms)
+  }
+  return [...terms].join(' ')
+}
+
 export type EquipmentQuery = {
   q?: string
   category?: EquipmentCategory
@@ -252,7 +425,7 @@ export function createEquipmentCatalog(records: readonly unknown[]): IndexedEqui
     .sort((left, right) => left.displayName.localeCompare(right.displayName, 'en') || left.slug.localeCompare(right.slug, 'en'))
     .map(item => ({
       item,
-      searchText: flattenSearchText(item).toLocaleLowerCase('en-US')
+      searchText: `${flattenSearchText(item)} ${effectAliasSearchText(item)}`.toLocaleLowerCase('en-US')
     }))
 }
 

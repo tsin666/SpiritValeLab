@@ -6,6 +6,8 @@ delete process.env.MONGODB_URI
 delete process.env.REDIS_URL
 
 const { buildApp } = await import('../src/app.js')
+const { collectEquipmentEffectTypes, equipmentEffectSearchAliases } = await import('../src/equipment.js')
+const { runtimeEquipmentRecords } = await import('../src/runtime-data.js')
 const app = await buildApp()
 before(async () => app.ready())
 after(async () => app.close())
@@ -250,7 +252,102 @@ test('equipment full-text and enriched filters include affixes, archetypes, slot
   }
 })
 
+test('equipment full-text search indexes localized effect aliases without changing source data', async () => {
+  const sourceRecords = [
+    {
+      id: 'Alias_Stats',
+      name: { en: 'Stats Source' },
+      stats: [{ type: 'AtkMult', value: 0.1 }]
+    },
+    {
+      id: 'Alias_Affix',
+      name: { en: 'Affix Source' },
+      affixes: [{ name: 'AllStats_3', type: 'AllStats', value: 3 }]
+    },
+    {
+      id: 'Alias_Candidate',
+      name: { en: 'Candidate Source' },
+      availableAffixes: [{ name: 'AtkSpd_10', type: 'AtkSpd', value: 0.1 }]
+    },
+    {
+      id: 'Alias_Set',
+      name: { en: 'Set Source' },
+      setBonuses: [{ pieces: 2, effects: [{ type: 'CritDamage', value: 0.2 }] }]
+    }
+  ]
+  const aliasApp = await buildApp({ equipmentRecords: sourceRecords })
+  await aliasApp.ready()
+  try {
+    const cases = [
+      ['攻击倍率', 'alias-stats'],
+      ['attack multiplier', 'alias-stats'],
+      ['全属性', 'alias-affix'],
+      ['all attributes', 'alias-affix'],
+      ['攻击速度', 'alias-candidate'],
+      ['attack speed', 'alias-candidate'],
+      ['暴击伤害', 'alias-set'],
+      ['critical damage', 'alias-set']
+    ] as const
+    for (const [query, expectedSlug] of cases) {
+      const response = await aliasApp.inject({ method: 'GET', url: `/api/equipment?q=${encodeURIComponent(query)}` })
+      assert.equal(response.statusCode, 200, query)
+      assert.deepEqual(response.json().items.map((item: any) => item.slug), [expectedSlug], query)
+    }
+
+    const detail = await aliasApp.inject({ method: 'GET', url: '/api/equipment/alias-candidate' })
+    assert.deepEqual(detail.json().availableAffixes, sourceRecords[2].availableAffixes)
+  } finally {
+    await aliasApp.close()
+  }
+})
+
+test('every real runtime equipment effect type has a maintained Chinese search alias', () => {
+  const runtimeTypes = collectEquipmentEffectTypes(...runtimeEquipmentRecords.flatMap(record => [
+    record.stats,
+    record.affixes,
+    record.availableAffixes,
+    record.setBonuses
+  ]))
+  const runtimeKeys = runtimeTypes.map(type => type.replace(/[^a-z0-9]/gi, '').toLocaleLowerCase('en-US'))
+  const aliasKeys = Object.keys(equipmentEffectSearchAliases).sort((left, right) => left.localeCompare(right, 'en'))
+
+  assert.equal(runtimeEquipmentRecords.length, 647)
+  assert.equal(runtimeTypes.length, 114)
+  assert.deepEqual(aliasKeys, [...runtimeKeys].sort((left, right) => left.localeCompare(right, 'en')))
+  for (const type of runtimeTypes) {
+    const aliases = equipmentEffectSearchAliases[type.replace(/[^a-z0-9]/gi, '').toLocaleLowerCase('en-US') as keyof typeof equipmentEffectSearchAliases]
+    assert.ok(aliases?.length >= 2, `${type} needs Chinese and English search aliases`)
+    assert.match(aliases[0], /[\u3400-\u9fff]/u, `${type} needs a primary Chinese label`)
+    assert.ok(aliases.some(alias => /[a-z]/i.test(alias)), `${type} needs a readable English alias`)
+  }
+})
+
 test('runtime equipment exposes verified stats, candidate affix pools, type-derived slots and complete sets', async () => {
+  const localizedEffectSearches = [
+    ['攻击倍率', 'AtkMult'],
+    ['attack multiplier', 'AtkMult'],
+    ['全属性', 'AllStats'],
+    ['攻击速度', 'AtkSpd'],
+    ['冷却恢复速度', 'CooldownRecovery'],
+    ['summon resistance', 'SummonResist'],
+    ['法术闪避', 'SpellDodge'],
+    ['skill chain count', 'SkillChains']
+  ] as const
+  for (const [query, expectedType] of localizedEffectSearches) {
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/equipment?q=${encodeURIComponent(query)}&pageSize=100`
+    })
+    assert.equal(response.statusCode, 200, query)
+    assert.ok(response.json().total > 0, query)
+    assert.ok(
+      response.json().items.some((item: any) =>
+        JSON.stringify([item.stats, item.affixes, item.availableAffixes, item.setBonuses]).includes(`\"type\":\"${expectedType}\"`)
+      ),
+      `${query} should resolve a real ${expectedType} source`
+    )
+  }
+
   const affixSearch = await app.inject({ method: 'GET', url: '/api/equipment?q=Crit_10&pageSize=10' })
   assert.equal(affixSearch.statusCode, 200)
   assert.ok(affixSearch.json().total > 0)

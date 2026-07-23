@@ -34,7 +34,22 @@ assert.equal(health.runtimeSpriteEntries, 1_179)
 const builds = await json('/api/builds?sort=rank')
 const removedDemoSlugs = new Set(['paladin-aegis-v1', 'wizard-meteor-v1', 'ranger-storm-v1', 'assassin-shadow-v1'])
 assert.ok(builds.every(build => !removedDemoSlugs.has(build.slug)), 'Legacy demo builds are still visible')
-assert.ok(builds.every(build => build.userGenerated === true && build.source === 'user'), 'Build hall contains a non-user build')
+assert.ok(builds.every(build => build.source !== 'seed'), 'Build hall contains an active seed build')
+assert.ok(builds.every(build => {
+  if (build.source === 'user') return build.userGenerated === true && !build.provenance && !build.sourceMetrics
+  if (build.source === 'external') {
+    return build.userGenerated === false
+      && typeof build.provenance?.site === 'string'
+      && typeof build.provenance?.sourceId === 'string'
+      && typeof build.provenance?.sourceUrl === 'string'
+      && typeof build.provenance?.originalTitle === 'string'
+      && !('contentHash' in build.provenance)
+      && !('translation' in build.provenance)
+      && Number.isFinite(Number(build.sourceMetrics?.views ?? 0))
+      && Number.isFinite(Number(build.sourceMetrics?.likes ?? 0))
+  }
+  return false
+}), 'Build hall contains a record with an invalid public source boundary')
 
 const equipment = await json('/api/equipment?q=Crit_10&pageSize=5')
 assert.ok(equipment.total > 0, 'Affix search returned no equipment')
@@ -119,4 +134,4 @@ for (const [path, language] of routes) {
   assert.match(html, new RegExp(`<html[^>]+lang=["']${language}["']`, 'i'), `${path} has the wrong html lang`)
 }
 
-console.log(`SpiritVale runtime smoke passed: ${routes.length} SSR routes, MongoDB, Redis, user-only builds, native class progression, 14 runtime collections, candidate affix pools, sets, skills, gems, and monster drops.`)
+console.log(`SpiritVale runtime smoke passed: ${routes.length} SSR routes, MongoDB, Redis, attributed public builds, native class progression, 14 runtime collections, candidate affix pools, sets, skills, gems, and monster drops.`)

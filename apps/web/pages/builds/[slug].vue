@@ -19,7 +19,7 @@ const { data: builderOptions, error: builderOptionsError } = await useFetch<Buil
 })
 const { t, locale } = useI18n()
 const { difficultyText, slotText } = useGameLocale()
-const { buildTitle, buildSummary, buildGuide, buildTags, skillName, equipmentName, equipmentSlot, metricLabel } = useBuildLocale()
+const { buildTitle, buildSummary, buildGuide, buildGuideHtml, buildTags, skillName, equipmentName, equipmentSlot, metricLabel } = useBuildLocale()
 const localePath = useLocalePath()
 
 if (error.value) throw createError({ statusCode: 404, statusMessage: t('builds.notFound') })
@@ -32,9 +32,12 @@ const buildClass = computed(() => locale.value.startsWith('en') ? build.value?.a
 const title = computed(() => buildTitle(build.value))
 const summary = computed(() => buildSummary(build.value))
 const guide = computed(() => buildGuide(build.value))
-const guideHtml = computed(() => build.value?.guideHtml || '')
+const guideHtml = computed(() => buildGuideHtml(build.value))
 const tags = computed(() => buildTags(build.value))
 const rankScore = computed(() => engagement.likes * 5 + engagement.views)
+const isExternal = computed(() => build.value?.source === 'external' && Boolean(build.value?.provenance))
+const provenance = computed(() => isExternal.value ? build.value?.provenance : undefined)
+const sourceMetrics = computed(() => build.value?.sourceMetrics)
 const classInitials = computed(() => String(buildClass.value || 'BD').slice(0, 2).toLocaleUpperCase(locale.value))
 const hasLoadoutSnapshot = computed(() => Boolean(
   build.value?.snapshotVersion
@@ -184,6 +187,12 @@ const itemPath = (item: Build['equipment'][number]) => item.kind === 'artifact'
   ? `/catalog/artifacts/${encodeURIComponent(String(item.slug))}`
   : `/equipment/${encodeURIComponent(String(item.slug))}`
 
+function sourceDate(value?: string) {
+  if (!value) return ''
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' }).format(date)
+}
+
 watch(build, (value) => {
   engagement.views = Number(value?.views || 0)
   engagement.likes = Number(value?.likes || 0)
@@ -254,11 +263,32 @@ useSeoMeta({ title: () => title.value || t('builds.seoTitle'), description: () =
       <img v-if="build.classIcon" :src="build.classIcon" :alt="buildClass">
       <span v-else class="build-detail-fallback" aria-hidden="true">{{ classInitials }}</span>
       <div>
-        <span class="tier tier-s">{{ build.tier === 'Community' ? t('builds.community') : `${build.tier} TIER` }}</span>
+        <div class="build-detail-source-badges">
+          <span v-if="build.tier !== 'Community'" class="tier tier-s">{{ `${build.tier} TIER` }}</span>
+          <span class="build-card__source" :class="{ 'build-card__source--external': isExternal }">{{ isExternal ? t('builds.sourceExternal') : t('builds.sourceUser') }}</span>
+        </div>
         <h1>{{ title }}</h1>
         <p>{{ buildClass }} · {{ difficultyText(build.difficulty) }} · {{ build.patch }}</p>
       </div>
     </div>
+
+    <section v-if="provenance" class="build-provenance" :aria-label="t('builds.sourceTitle')">
+      <div class="build-provenance__copy">
+        <span>{{ t('builds.sourceExternal') }}</span>
+        <strong>{{ provenance.site }}</strong>
+        <p>
+          <template v-if="provenance.author">{{ t('builds.sourceAuthor', { author: provenance.author }) }}</template>
+          <template v-if="sourceDate(provenance.sourceCreatedAt)"> · {{ t('builds.sourcePublished', { date: sourceDate(provenance.sourceCreatedAt) }) }}</template>
+          · {{ t('builds.originalLanguage', { language: provenance.originalLanguage }) }}
+        </p>
+      </div>
+      <div v-if="sourceMetrics" class="build-provenance__metrics" :aria-label="t('builds.sourceMetricsTitle')">
+        <div><strong>{{ Number(sourceMetrics.likes || 0).toLocaleString(locale) }}</strong><span>{{ t('builds.sourceLikes') }}</span></div>
+        <div><strong>{{ Number(sourceMetrics.views || 0).toLocaleString(locale) }}</strong><span>{{ t('builds.sourceViews') }}</span></div>
+        <small>{{ t('builds.sourceMetricsSnapshot', { date: sourceDate(sourceMetrics.fetchedAt) }) }}</small>
+      </div>
+      <a :href="provenance.sourceUrl" target="_blank" rel="noopener noreferrer nofollow">{{ t('builds.openOriginal') }} ↗</a>
+    </section>
 
     <section class="build-engagement" :aria-label="t('builds.engagementTitle')">
       <div><strong>{{ engagement.likes.toLocaleString(locale) }}</strong><span>{{ t('builds.likesLabel') }}</span></div>

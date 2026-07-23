@@ -12,15 +12,25 @@ const likes = computed(() => Number(props.build.likes || 0))
 const views = computed(() => Number(props.build.views || 0))
 const rankScore = computed(() => Number(props.build.rankScore ?? likes.value * 5 + views.value))
 const classInitials = computed(() => buildClass(props.build).slice(0, 2).toLocaleUpperCase(locale.value))
+const isExternal = computed(() => props.build.source === 'external' && Boolean(props.build.provenance))
+const sourceLabel = computed(() => isExternal.value ? t('builds.sourceExternal') : t('builds.sourceUser'))
+const author = computed(() => {
+  const value = isExternal.value ? props.build.provenance?.author : props.build.createdBy
+  return value && !/^(local-user|api-test|snapshot-test|guide-html-test)$/i.test(value) ? value : ''
+})
 </script>
 <template>
   <NuxtLink class="build-card" :to="localePath(`/builds/${encodeURIComponent(build.slug)}`)">
     <div class="card-top">
       <img v-if="build.classIcon" class="class-image" :src="build.classIcon" :alt="buildClass(build)">
       <span v-else class="class-image build-card__fallback" aria-hidden="true">{{ classInitials }}</span>
-      <span class="tier" :class="`tier-${build.tier.toLowerCase()}`">{{ build.tier === 'Community' ? t('builds.community') : `${build.tier} TIER` }}</span>
+      <div class="build-card__badges">
+        <span class="build-card__source" :class="{ 'build-card__source--external': isExternal }">{{ sourceLabel }}</span>
+        <span v-if="build.tier !== 'Community'" class="tier" :class="`tier-${build.tier.toLowerCase()}`">{{ `${build.tier} TIER` }}</span>
+      </div>
     </div>
     <span class="class-label">{{ buildClass(build) }} · {{ difficultyText(build.difficulty) }}</span>
+    <small v-if="author" class="build-card__author">{{ t('builds.byAuthor', { author }) }}</small>
     <h3>{{ title }}</h3>
     <p>{{ summary }}</p>
     <div class="skill-row">

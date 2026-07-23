@@ -55,6 +55,7 @@ const catalogKinds = runtimeCatalogKinds
 const searchSchema = z.object({
   q: z.string().trim().max(100).optional(),
   archetype: z.string().trim().max(50).optional(),
+  origin: z.enum(['all', 'user', 'external']).default('all'),
   sort: z.enum(['rank', 'newest', 'likes', 'views']).default('rank')
 }).strict()
 const buildEngagementSchema = z.object({ visitorId: z.string().uuid() }).strict()
@@ -476,7 +477,10 @@ function buildRankScore(value: unknown) {
 
 function buildCreatedTime(value: unknown) {
   const record = asRecord(value)
-  const raw = record.createdAt || record.savedAt || record.updatedAt
+  const provenance = asRecord(record.provenance)
+  const raw = readString(record.source) === 'external'
+    ? provenance.sourceCreatedAt || provenance.sourceUpdatedAt || record.createdAt || record.savedAt || record.updatedAt
+    : record.createdAt || record.savedAt || record.updatedAt
   const time = raw instanceof Date ? raw.getTime() : Date.parse(String(raw || ''))
   return Number.isFinite(time) ? time : 0
 }
@@ -675,8 +679,10 @@ export async function buildApp(options: BuildAppOptions = {}) {
       const record = asRecord(build)
       const text = flattenSearchText(record).toLocaleLowerCase('en-US')
       const archetype = readString(record.archetype) || ''
+      const source = readString(record.source) || (record.userGenerated === true ? 'user' : '')
       return (!query.q || text.includes(query.q.toLocaleLowerCase('en-US')))
         && (!query.archetype || canonical(archetype) === canonical(query.archetype))
+        && (query.origin === 'all' || source === query.origin)
     })
     return filtered
       .map((build): Record<string, unknown> & { rankScore: number } => ({ ...asRecord(build), rankScore: buildRankScore(build) }))

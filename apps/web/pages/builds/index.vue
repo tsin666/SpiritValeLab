@@ -2,10 +2,12 @@
 import type { Build } from '~/composables/useApi'
 
 type BuildSort = 'rank' | 'newest' | 'likes' | 'views'
+type BuildOrigin = 'all' | 'user' | 'external'
 
 const api = useApi()
 const q = ref('')
 const archetype = ref('')
+const origin = ref<BuildOrigin>('all')
 const sort = ref<BuildSort>('rank')
 const { t, locale } = useI18n()
 const localePath = useLocalePath()
@@ -15,7 +17,7 @@ const { data: directory } = await useFetch<Build[]>(`${api}/api/builds`, {
   default: () => []
 })
 const { data: builds, status, error, refresh } = await useFetch<Build[]>(`${api}/api/builds`, {
-  query: { q, archetype, sort },
+  query: { q, archetype, origin, sort },
   default: () => []
 })
 
@@ -23,10 +25,11 @@ const classes = computed(() => [...new Map(directory.value.map(build => [build.a
   value: build.archetype,
   label: locale.value.startsWith('en') ? build.archetype : (build.archetypeZh || build.archetype)
 }])).values()].sort((left, right) => left.label.localeCompare(right.label, locale.value)))
-const hasFilters = computed(() => Boolean(q.value.trim() || archetype.value))
+const hasFilters = computed(() => Boolean(q.value.trim() || archetype.value || origin.value !== 'all'))
 const clearFilters = () => {
   q.value = ''
   archetype.value = ''
+  origin.value = 'all'
 }
 
 useSeoMeta({ title: () => t('builds.seoTitle'), description: () => t('builds.seoDescription') })
@@ -45,6 +48,11 @@ useSeoMeta({ title: () => t('builds.seoTitle'), description: () => t('builds.seo
       <select v-model="archetype" :aria-label="t('builds.classFilter')">
         <option value="">{{ t('builds.allClasses') }}</option>
         <option v-for="entry in classes" :key="entry.value" :value="entry.value">{{ entry.label }}</option>
+      </select>
+      <select v-model="origin" :aria-label="t('builds.originFilter')">
+        <option value="all">{{ t('builds.originAll') }}</option>
+        <option value="user">{{ t('builds.originUser') }}</option>
+        <option value="external">{{ t('builds.originExternal') }}</option>
       </select>
       <select v-model="sort" :aria-label="t('builds.sortLabel')">
         <option value="rank">{{ t('builds.sortRank') }}</option>

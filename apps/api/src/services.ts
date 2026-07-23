@@ -14,18 +14,141 @@ type StoredBuild = Record<string, unknown> & {
   likes?: number
   viewedBy?: string[]
   likedBy?: string[]
+  provenance?: {
+    site?: string
+    sourceId?: string
+    contentHash?: string
+    firstImportedAt?: Date | string
+    lastFetchedAt?: Date | string
+    translation?: {
+      sourceHash?: string
+      [key: string]: unknown
+    }
+    [key: string]: unknown
+  }
 }
 const fallbackUserBuilds: StoredBuild[] = []
 const buildsCacheKey = 'spiritvale:builds:v2'
 const legacyDemoBuildSlugs = ['paladin-aegis-v1', 'wizard-meteor-v1', 'ranger-storm-v1', 'assassin-shadow-v1']
 
+export type ExternalBuildProvenance = {
+  site: string
+  sourceId: string
+  sourceUrl: string
+  author?: string
+  originalLanguage: string
+  originalTitle: string
+  originalSummary?: string
+  originalGuideHtml?: string
+  sourceCreatedAt?: Date | string
+  sourceUpdatedAt?: Date | string
+  firstImportedAt: Date | string
+  lastFetchedAt: Date | string
+  contentHash: string
+  translation: {
+    targetLanguage: 'zh-CN'
+    status: 'pending' | 'translated' | 'reviewed' | 'stale' | 'failed' | 'not-needed'
+    method?: 'manual' | 'machine-assisted'
+    updatedAt?: Date | string
+    sourceHash?: string
+  }
+}
+
+export type ExternalBuildSourceMetrics = {
+  likes?: number
+  views?: number
+  comments?: number
+  fetchedAt: Date | string
+}
+
+export type TrustedExternalBuildInput = Record<string, unknown> & {
+  slug?: string
+  title: string
+  archetype: string
+  difficulty: string
+  provenance: ExternalBuildProvenance
+  sourceMetrics?: ExternalBuildSourceMetrics
+}
+
+const externalBuildContentFields = [
+  'title',
+  'titleEn',
+  'archetype',
+  'archetypeZh',
+  'role',
+  'buildType',
+  'buildFor',
+  'buildOrientation',
+  'tier',
+  'patch',
+  'difficulty',
+  'summary',
+  'summaryEn',
+  'guide',
+  'guideHtml',
+  'guideEn',
+  'guideHtmlEn',
+  'tags',
+  'tagsEn',
+  'updatedAt',
+  'color',
+  'classIcon',
+  'snapshotVersion',
+  'character',
+  'skills',
+  'skillTree',
+  'equipment',
+  'artifacts',
+  'grimoires',
+  'metrics',
+  'createdBy',
+  'active'
+] as const
+
+function publicProvenance(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const record = value as Record<string, unknown>
+  const allowedFields = [
+    'site',
+    'sourceId',
+    'sourceUrl',
+    'author',
+    'originalLanguage',
+    'originalTitle',
+    'sourceCreatedAt',
+    'sourceUpdatedAt'
+  ] as const
+  return Object.fromEntries(
+    allowedFields
+      .filter(field => record[field] !== undefined)
+      .map(field => [field, record[field]])
+  )
+}
+
 function publicBuild(value: StoredBuild | Record<string, unknown>) {
-  const { viewedBy: _viewedBy, likedBy: _likedBy, guideHtml, ...record } = value as StoredBuild
+  const {
+    viewedBy: _viewedBy,
+    likedBy: _likedBy,
+    guideHtml,
+    guideHtmlEn,
+    provenance,
+    ...record
+  } = value as StoredBuild
   const normalizedGuideHtml = typeof guideHtml === 'string' ? normalizeGuideHtml(guideHtml) : undefined
   const safeGuideHtml = normalizedGuideHtml && guideHtmlTextLength(normalizedGuideHtml) <= MAX_GUIDE_TEXT_LENGTH
     ? normalizedGuideHtml
     : undefined
-  return { ...record, ...(safeGuideHtml ? { guideHtml: safeGuideHtml } : {}) }
+  const normalizedGuideHtmlEn = typeof guideHtmlEn === 'string' ? normalizeGuideHtml(guideHtmlEn) : undefined
+  const safeGuideHtmlEn = normalizedGuideHtmlEn && guideHtmlTextLength(normalizedGuideHtmlEn) <= MAX_GUIDE_TEXT_LENGTH
+    ? normalizedGuideHtmlEn
+    : undefined
+  const safeProvenance = publicProvenance(provenance)
+  return {
+    ...record,
+    ...(safeGuideHtml ? { guideHtml: safeGuideHtml } : {}),
+    ...(safeGuideHtmlEn ? { guideHtmlEn: safeGuideHtmlEn } : {}),
+    ...(safeProvenance ? { provenance: safeProvenance } : {})
+  }
 }
 
 function visitorFingerprint(visitorId: string) {
@@ -142,12 +265,30 @@ export async function createBuild(input: Record<string, unknown> & { title: stri
   }
   if (await slugExists(slug)) throw new DuplicateBuildSlugError(slug)
 
+  const {
+    _id: _id,
+    active: _active,
+    createdAt: _createdAt,
+    likedBy: _likedBy,
+    likes: _likes,
+    metrics: _metrics,
+    provenance: _provenance,
+    savedAt: _savedAt,
+    source: _source,
+    sourceMetrics: _sourceMetrics,
+    tier: _tier,
+    updatedAt: _updatedAt,
+    userGenerated: _userGenerated,
+    viewedBy: _viewedBy,
+    views: _views,
+    ...userInput
+  } = input
   const now = new Date()
   const record = {
-    ...input,
+    ...userInput,
     slug,
     tier: 'Community',
-    patch: input.patch || 'Community',
+    patch: userInput.patch || 'Community',
     views: 0,
     likes: 0,
     viewedBy: [],
@@ -175,6 +316,198 @@ export async function createBuild(input: Record<string, unknown> & { title: stri
   fallbackUserBuilds.unshift(record)
   await redis?.del(buildsCacheKey).catch(() => undefined)
   return publicBuild(record)
+}
+
+function pickExternalBuildContent(input: TrustedExternalBuildInput) {
+  const content: Record<string, unknown> = {}
+  for (const field of externalBuildContentFields) {
+    if (Object.prototype.hasOwnProperty.call(input, field)) content[field] = input[field]
+  }
+  return content
+}
+
+async function normalizeExternalBuild(
+  input: TrustedExternalBuildInput,
+  slug: string,
+  firstImportedAt?: Date | string
+) {
+  const record = {
+    ...pickExternalBuildContent(input),
+    slug,
+    source: 'external',
+    userGenerated: false,
+    provenance: {
+      ...input.provenance,
+      firstImportedAt: firstImportedAt || input.provenance.firstImportedAt
+    },
+    ...(input.sourceMetrics ? { sourceMetrics: input.sourceMetrics } : {}),
+    views: 0,
+    likes: 0,
+    viewedBy: [],
+    likedBy: []
+  }
+  const document = new BuildModel(record)
+  await document.validate()
+  const normalized = document.toObject() as StoredBuild & {
+    _id?: unknown
+    createdAt?: unknown
+    savedAt?: unknown
+  }
+  delete normalized._id
+  delete normalized.createdAt
+  delete normalized.savedAt
+  return normalized
+}
+
+function externalBuildIdentity(input: TrustedExternalBuildInput) {
+  return {
+    source: 'external',
+    'provenance.site': input.provenance.site,
+    'provenance.sourceId': input.provenance.sourceId
+  }
+}
+
+async function resolveExternalSlug(input: TrustedExternalBuildInput) {
+  const baseSlug = input.slug
+    || slugify(input.title)
+    || `external-build-${slugify(input.provenance.sourceId) || createHash('sha256')
+      .update(`${input.provenance.site}:${input.provenance.sourceId}`)
+      .digest('hex')
+      .slice(0, 12)}`
+  let slug = baseSlug
+  for (let suffix = 1; suffix <= 1_000; suffix += 1) {
+    if (!(await slugExists(slug))) return slug
+    slug = `${baseSlug}-${suffix + 1}`
+  }
+  throw new DuplicateBuildSlugError(baseSlug)
+}
+
+function isDuplicateKeyError(error: unknown) {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 11000
+}
+
+function preserveEngagement(existing: StoredBuild, replacement: StoredBuild) {
+  return {
+    ...replacement,
+    slug: existing.slug,
+    views: Number(existing.views || 0),
+    likes: Number(existing.likes || 0),
+    viewedBy: Array.isArray(existing.viewedBy) ? [...existing.viewedBy] : [],
+    likedBy: Array.isArray(existing.likedBy) ? [...existing.likedBy] : []
+  }
+}
+
+async function findExternalBuildInMongo(input: TrustedExternalBuildInput) {
+  return BuildModel.findOne(externalBuildIdentity(input))
+    .select('+provenance.contentHash +provenance.translation.sourceHash +viewedBy +likedBy')
+    .lean()
+}
+
+/**
+ * Trusted ingestion boundary for already normalized, attributed external builds.
+ * HTTP request payloads must never be passed here directly.
+ */
+export async function upsertExternalBuild(input: TrustedExternalBuildInput) {
+  if (!input.provenance || typeof input.provenance.site !== 'string' || typeof input.provenance.sourceId !== 'string') {
+    throw new TypeError('External builds require a site and sourceId')
+  }
+
+  if (mongoReady) {
+    const existing = await findExternalBuildInMongo(input) as StoredBuild | null
+    const slug = existing?.slug || await resolveExternalSlug(input)
+    const normalized = await normalizeExternalBuild(
+      input,
+      slug,
+      existing?.provenance?.firstImportedAt
+    )
+
+    if (existing?.provenance?.contentHash === normalized.provenance?.contentHash) {
+      const updated = await BuildModel.findByIdAndUpdate(
+        (existing as Record<string, unknown>)._id,
+        {
+          $set: {
+            'provenance.sourceUrl': normalized.provenance?.sourceUrl,
+            'provenance.author': normalized.provenance?.author,
+            'provenance.sourceCreatedAt': normalized.provenance?.sourceCreatedAt,
+            'provenance.sourceUpdatedAt': normalized.provenance?.sourceUpdatedAt,
+            'provenance.lastFetchedAt': normalized.provenance?.lastFetchedAt,
+            ...(normalized.sourceMetrics ? { sourceMetrics: normalized.sourceMetrics } : {})
+          },
+          ...(!normalized.sourceMetrics ? { $unset: { sourceMetrics: 1 } } : {})
+        },
+        { new: true }
+      ).select('-viewedBy -likedBy').lean()
+      await redis?.del(buildsCacheKey).catch(() => undefined)
+      return publicBuild((updated || existing) as unknown as Record<string, unknown>)
+    }
+
+    if (existing) {
+      const replacement = preserveEngagement(existing, normalized) as StoredBuild & {
+        _id?: unknown
+        createdAt?: unknown
+      }
+      replacement._id = (existing as Record<string, unknown>)._id
+      replacement.createdAt = (existing as Record<string, unknown>).createdAt
+      await BuildModel.replaceOne(
+        { _id: replacement._id },
+        replacement,
+        { runValidators: true }
+      )
+      const updated = await BuildModel.findById(replacement._id).select('-viewedBy -likedBy').lean()
+      await redis?.del(buildsCacheKey).catch(() => undefined)
+      return updated ? publicBuild(updated as unknown as Record<string, unknown>) : null
+    }
+
+    try {
+      const created = await BuildModel.create(normalized)
+      await redis?.del(buildsCacheKey).catch(() => undefined)
+      return publicBuild(created.toObject())
+    } catch (error) {
+      if (isDuplicateKeyError(error)) {
+        const concurrent = await findExternalBuildInMongo(input)
+        if (concurrent) return upsertExternalBuild(input)
+      }
+      throw error
+    }
+  }
+
+  const existingIndex = fallbackUserBuilds.findIndex(build =>
+    build.provenance?.site === input.provenance.site
+    && build.provenance?.sourceId === input.provenance.sourceId
+  )
+  const existing = existingIndex >= 0 ? fallbackUserBuilds[existingIndex] : undefined
+  const slug = existing?.slug || await resolveExternalSlug(input)
+  const normalized = await normalizeExternalBuild(
+    input,
+    slug,
+    existing?.provenance?.firstImportedAt
+  )
+
+  if (existing && existing.provenance?.contentHash === normalized.provenance?.contentHash) {
+    existing.provenance = {
+      ...existing.provenance,
+      sourceUrl: normalized.provenance?.sourceUrl,
+      author: normalized.provenance?.author,
+      sourceCreatedAt: normalized.provenance?.sourceCreatedAt,
+      sourceUpdatedAt: normalized.provenance?.sourceUpdatedAt,
+      lastFetchedAt: normalized.provenance?.lastFetchedAt
+    }
+    if (normalized.sourceMetrics) existing.sourceMetrics = normalized.sourceMetrics
+    else delete existing.sourceMetrics
+    await redis?.del(buildsCacheKey).catch(() => undefined)
+    return publicBuild(existing)
+  }
+
+  if (existing) {
+    const replacement = preserveEngagement(existing, normalized)
+    fallbackUserBuilds.splice(existingIndex, 1, replacement)
+    await redis?.del(buildsCacheKey).catch(() => undefined)
+    return publicBuild(replacement)
+  }
+
+  fallbackUserBuilds.unshift(normalized)
+  await redis?.del(buildsCacheKey).catch(() => undefined)
+  return publicBuild(normalized)
 }
 
 export async function registerBuildView(slug: string, visitorId: string) {

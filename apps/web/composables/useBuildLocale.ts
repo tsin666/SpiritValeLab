@@ -6,6 +6,9 @@ export function useBuildLocale() {
   const buildTitle = (build?: Partial<Build> | null) => gameLocale.value === 'en' ? (build?.titleEn || build?.title || '') : (build?.title || build?.titleEn || '')
   const buildSummary = (build?: Partial<Build> | null) => gameLocale.value === 'en' ? (build?.summaryEn || build?.summary || '') : (build?.summary || build?.summaryEn || '')
   const buildGuide = (build?: Partial<Build> | null) => gameLocale.value === 'en' ? (build?.guideEn?.length ? build.guideEn : (build?.guide || [])) : (build?.guide?.length ? build.guide : (build?.guideEn || []))
+  const buildGuideHtml = (build?: Partial<Build> | null) => gameLocale.value === 'en'
+    ? (build?.guideHtmlEn || build?.guideHtml || '')
+    : (build?.guideHtml || build?.guideHtmlEn || '')
   const buildTags = (build?: Partial<Build> | null) => gameLocale.value === 'en' ? (build?.tagsEn?.length ? build.tagsEn : (build?.tags || [])) : (build?.tags?.length ? build.tags : (build?.tagsEn || []))
   const skillName = (skill?: Partial<BuildSkill> | null) => gameLocale.value === 'en'
     ? (skill?.nameEn || skill?.name || skill?.nameZh || '')
@@ -16,5 +19,5 @@ export function useBuildLocale() {
   const equipmentSlot = (item?: Partial<BuildEquipment> | null) => gameLocale.value === 'en' ? (item?.slotEn || item?.slot || '') : (item?.slot || item?.slotEn || '')
   const metricLabel = (metric?: Partial<BuildMetric> | null) => gameLocale.value === 'en' ? (metric?.labelEn || metric?.label || '') : (metric?.label || metric?.labelEn || '')
 
-  return { buildTitle, buildSummary, buildGuide, buildTags, skillName, equipmentName, equipmentSlot, metricLabel }
+  return { buildTitle, buildSummary, buildGuide, buildGuideHtml, buildTags, skillName, equipmentName, equipmentSlot, metricLabel }
 }

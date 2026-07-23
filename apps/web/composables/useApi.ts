@@ -30,7 +30,7 @@ export type BuildSkillAllocation = BuildSkill & {
   level: number
   maxLevel: number
   treeArchetype: string
-  treeArchetypeSource: 'user-confirmed'
+  treeArchetypeSource: 'user-confirmed' | 'external-source'
 }
 
 export type BuildEquipmentCard = {
@@ -199,6 +199,23 @@ export type BuildMetric = {
   value: number
 }
 
+export type BuildProvenance = {
+  site: string
+  sourceId: string
+  sourceUrl: string
+  author?: string
+  originalLanguage: string
+  originalTitle: string
+  sourceCreatedAt?: string
+  sourceUpdatedAt?: string
+}
+
+export type BuildSourceMetrics = {
+  likes?: number
+  views?: number
+  fetchedAt: string
+}
+
 export type Build = {
   slug: string
   title: string
@@ -212,9 +229,14 @@ export type Build = {
   summaryEn?: string
   guide: string[]
   guideHtml?: string
+  guideHtmlEn?: string
   guideEn?: string[]
   tags: string[]
   tagsEn?: string[]
+  role?: string
+  buildType?: string
+  buildFor?: string
+  buildOrientation?: string
   views: number
   likes: number
   rankScore?: number
@@ -230,6 +252,11 @@ export type Build = {
   artifacts?: BuildArtifact[]
   grimoires?: BuildGrimoire[]
   metrics: BuildMetric[]
+  source?: 'seed' | 'user' | 'external'
+  userGenerated?: boolean
+  createdBy?: string
+  provenance?: BuildProvenance
+  sourceMetrics?: BuildSourceMetrics
 }
 
 export type ApiHealth = {

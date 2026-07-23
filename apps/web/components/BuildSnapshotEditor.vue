@@ -15,12 +15,12 @@ import type {
 } from '~/composables/useApi'
 import { localizedText } from '~/composables/useApi'
 import type {
-  EquipmentOcrParse,
-  OcrCatalogMatchResponse,
-  OcrCatalogMatchType,
-  OcrReviewDraft
+  BuildCatalogOcrParseResult,
+  BuildCatalogOcrParsedLine
 } from '~/types/ocr'
 import { equipmentOcrMatchLines, parseEquipmentOcrText } from '~/utils/ocr-equipment'
+import { artifactOcrMatchLines, parseArtifactOcrText } from '~/utils/ocr-artifact'
+import { grimoireOcrMatchLines, parseGrimoireOcrText } from '~/utils/ocr-grimoire'
 
 const props = defineProps<{
   options: BuilderOptions
@@ -42,7 +42,6 @@ const emit = defineEmits<{
 
 const { t, locale } = useI18n()
 const { gameText, categoryText, slotText, typeText } = useGameLocale()
-const api = useApi().replace(/\/$/u, '')
 const equipmentSlot = ref<BuildEquipmentSlot>()
 const artifactSlot = ref<BuildArtifactSlot>()
 const grimoireIndex = ref<number>()
@@ -55,61 +54,6 @@ const skillTreeArchetype = ref('')
 const pickerSection = ref<HTMLElement>()
 const characterSection = ref<HTMLElement>()
 const skillSection = ref<HTMLElement>()
-const showEquipmentOcr = ref(false)
-const equipmentOcrText = ref('')
-const equipmentOcrParsed = ref<EquipmentOcrParse>()
-const equipmentOcrState = ref<'idle' | 'matching' | 'ready' | 'empty' | 'unmatched' | 'incompatible' | 'rate-limited' | 'failed' | 'applied'>('idle')
-let equipmentOcrRequestToken = 0
-
-type EquipmentOcrSuggestion = {
-  option: BuilderOption
-  query: string
-  matchType: OcrCatalogMatchType
-  score: number
-}
-
-const equipmentOcrSuggestions = ref<EquipmentOcrSuggestion[]>([])
-const equipmentOcrLabels = computed(() => ({
-  title: t('builder.loadout.editor.ocr.importer.title'),
-  description: t('builder.loadout.editor.ocr.importer.description'),
-  privacy: t('builder.loadout.editor.ocr.importer.privacy'),
-  chooseFile: t('builder.loadout.editor.ocr.importer.chooseFile'),
-  replaceFile: t('builder.loadout.editor.ocr.importer.replaceFile'),
-  supportedFiles: t('builder.loadout.editor.ocr.importer.supportedFiles'),
-  previewAlt: t('builder.loadout.editor.ocr.importer.previewAlt'),
-  start: t('builder.loadout.editor.ocr.importer.start'),
-  runAgain: t('builder.loadout.editor.ocr.importer.runAgain'),
-  cancel: t('builder.loadout.editor.ocr.importer.cancel'),
-  clear: t('builder.loadout.editor.ocr.importer.clear'),
-  validating: t('builder.loadout.editor.ocr.importer.validating'),
-  preprocessing: t('builder.loadout.editor.ocr.importer.preprocessing'),
-  loading: t('builder.loadout.editor.ocr.importer.loading'),
-  recognizing: t('builder.loadout.editor.ocr.importer.recognizing'),
-  reviewTitle: t('builder.loadout.editor.ocr.importer.reviewTitle'),
-  reviewDescription: t('builder.loadout.editor.ocr.importer.reviewDescription'),
-  recognizedText: t('builder.loadout.editor.ocr.importer.recognizedText'),
-  characterCount: t('builder.loadout.editor.ocr.importer.characterCount'),
-  confirm: t('builder.loadout.editor.ocr.importer.confirm'),
-  emptyText: t('builder.loadout.editor.ocr.importer.emptyText'),
-  fileTooLarge: t('builder.loadout.editor.ocr.importer.fileTooLarge'),
-  unsupportedFormat: t('builder.loadout.editor.ocr.importer.unsupportedFormat'),
-  invalidImage: t('builder.loadout.editor.ocr.importer.invalidImage'),
-  dimensionsExceeded: t('builder.loadout.editor.ocr.importer.dimensionsExceeded'),
-  browserUnsupported: t('builder.loadout.editor.ocr.importer.browserUnsupported'),
-  genericError: t('builder.loadout.editor.ocr.importer.genericError')
-}))
-
-const equipmentOcrStatusText = computed(() => {
-  if (equipmentOcrState.value === 'matching') return t('builder.loadout.editor.ocr.matching')
-  if (equipmentOcrState.value === 'ready') return t('builder.loadout.editor.ocr.matchesReady', { count: equipmentOcrSuggestions.value.length })
-  if (equipmentOcrState.value === 'empty') return t('builder.loadout.editor.ocr.noName')
-  if (equipmentOcrState.value === 'unmatched') return t('builder.loadout.editor.ocr.noMatches')
-  if (equipmentOcrState.value === 'incompatible') return t('builder.loadout.editor.ocr.noCompatible')
-  if (equipmentOcrState.value === 'rate-limited') return t('builder.loadout.editor.ocr.rateLimited')
-  if (equipmentOcrState.value === 'failed') return t('builder.loadout.editor.ocr.failed')
-  if (equipmentOcrState.value === 'applied') return t('builder.loadout.editor.ocr.applied')
-  return ''
-})
 
 const archetypeCatalog = computed(() => new Map(props.options.archetypes.map(item => [canonical(item.id), item])))
 const selectedLineage = computed(() => {
@@ -162,9 +106,6 @@ watch(() => props.archetype?.id, () => {
   skillTreeArchetype.value = targets.at(-1)?.id || ''
 }, { immediate: true })
 
-watch(() => props.archetype?.id, (current, previous) => {
-  if (previous !== undefined && current !== previous) resetEquipmentOcrSession()
-})
 
 function canonical(value?: string | null) {
   return String(value || '').replace(/[^a-z0-9]/gi, '').toLocaleLowerCase('en-US')
@@ -290,108 +231,103 @@ const artifactChoiceTotal = computed(() => props.options.artifacts.filter(item =
 const artifactChoices = computed(() => props.options.artifacts.filter(item => matchesSearch(item)).slice(0, 100))
 const grimoireChoiceTotal = computed(() => props.options.grimoires.filter(item => matchesSelectedArchetype(item) && matchesSearch(item)).length)
 const grimoireChoices = computed(() => props.options.grimoires.filter(item => matchesSelectedArchetype(item) && matchesSearch(item)).slice(0, 100))
-
-function resetEquipmentOcrSession() {
-  equipmentOcrRequestToken += 1
-  showEquipmentOcr.value = false
-  equipmentOcrText.value = ''
-  equipmentOcrParsed.value = undefined
-  equipmentOcrSuggestions.value = []
-  equipmentOcrState.value = 'idle'
-}
-
-function toggleEquipmentOcr() {
-  showEquipmentOcr.value = !showEquipmentOcr.value
-}
-
-function findEquipmentOcrOption(id: string, slug: string) {
-  const idKey = canonical(id)
-  const slugKey = canonical(slug)
-  return props.options.equipment.find(item => canonical(item.id) === idKey
-    || (slugKey && canonical(item.slug) === slugKey))
-}
-
-function isEquipmentOcrOptionCompatible(item: BuilderOption) {
-  return Boolean(equipmentSlot.value)
-    && !isGrimoire(item)
+const equipmentOcrOptions = computed(() => equipmentSlot.value
+  ? props.options.equipment.filter(item => !isGrimoire(item)
     && matchesSelectedArchetype(item)
-    && matchesEquipmentSlot(item, equipmentSlot.value!)
-}
+    && matchesEquipmentSlot(item, equipmentSlot.value!))
+  : [])
+const artifactOcrOptions = computed(() => props.options.artifacts)
+const grimoireOcrOptions = computed(() => props.options.grimoires.filter(item => matchesSelectedArchetype(item) && !grimoireSelectedElsewhere(item)))
+const equipmentOcrKindLabels = computed(() => ({
+  singular: t('builder.loadout.editor.ocr.kinds.equipment'),
+  plural: t('builder.loadout.editor.ocr.kinds.equipmentPlural'),
+  screenshot: t('builder.loadout.editor.ocr.kindScreenshots.equipment')
+}))
+const artifactOcrKindLabels = computed(() => ({
+  singular: t('builder.loadout.editor.ocr.kinds.artifact'),
+  plural: t('builder.loadout.editor.ocr.kinds.artifactPlural'),
+  screenshot: t('builder.loadout.editor.ocr.kindScreenshots.artifact')
+}))
+const grimoireOcrKindLabels = computed(() => ({
+  singular: t('builder.loadout.editor.ocr.kinds.grimoire'),
+  plural: t('builder.loadout.editor.ocr.kinds.grimoirePlural'),
+  screenshot: t('builder.loadout.editor.ocr.kindScreenshots.grimoire')
+}))
 
-function fetchStatus(error: unknown) {
-  if (!error || typeof error !== 'object') return 0
-  const candidate = error as { status?: number; statusCode?: number; response?: { status?: number; _data?: { code?: string } } }
-  if (candidate.response?._data?.code === 'RATE_LIMITED') return 429
-  return Number(candidate.statusCode || candidate.status || candidate.response?.status || 0)
-}
-
-async function confirmEquipmentOcr(draft: OcrReviewDraft) {
-  const requestToken = ++equipmentOcrRequestToken
-  equipmentOcrText.value = draft.text
-  equipmentOcrParsed.value = parseEquipmentOcrText(draft.text)
-  equipmentOcrSuggestions.value = []
-  const lines = equipmentOcrMatchLines(equipmentOcrParsed.value).slice(0, 64)
-  if (!lines.length) {
-    equipmentOcrState.value = 'empty'
-    return
-  }
-
-  equipmentOcrState.value = 'matching'
-  try {
-    const response = await $fetch<OcrCatalogMatchResponse>(`${api}/api/ocr/match`, {
-      method: 'POST',
-      body: { lines, maxCandidates: 5 }
-    })
-    if (requestToken !== equipmentOcrRequestToken) return
-
-    const suggestions = new Map<string, EquipmentOcrSuggestion>()
-    let catalogCandidateCount = 0
-    for (const line of response.lines) {
-      for (const candidate of line.candidates) {
-        if (candidate.kind !== 'equipment') continue
-        catalogCandidateCount += 1
-        const option = findEquipmentOcrOption(candidate.id, candidate.slug)
-        if (!option || !isEquipmentOcrOptionCompatible(option)) continue
-        const previous = suggestions.get(option.id)
-        const next = { option, query: line.query, matchType: candidate.matchType, score: candidate.score }
-        if (!previous
-          || (next.matchType === 'exact' && previous.matchType !== 'exact')
-          || (next.matchType === previous.matchType && next.score > previous.score)) {
-          suggestions.set(option.id, next)
-        }
-      }
-    }
-
-    equipmentOcrSuggestions.value = [...suggestions.values()]
-      .sort((left, right) => (left.matchType === right.matchType ? 0 : left.matchType === 'exact' ? -1 : 1)
-        || right.score - left.score
-        || optionName(left.option).localeCompare(optionName(right.option), locale.value))
-      .slice(0, 5)
-    equipmentOcrState.value = equipmentOcrSuggestions.value.length
-      ? 'ready'
-      : catalogCandidateCount ? 'incompatible' : 'unmatched'
-  } catch (error) {
-    if (requestToken !== equipmentOcrRequestToken) return
-    equipmentOcrState.value = fetchStatus(error) === 429 ? 'rate-limited' : 'failed'
+function parseEquipmentCatalogOcr(text: string): BuildCatalogOcrParseResult {
+  const parsed = parseEquipmentOcrText(text)
+  return {
+    lines: equipmentOcrMatchLines(parsed).map(line => ({
+      id: line.id,
+      text: line.text,
+      refineLevel: parsed.refineLevel,
+      potential: parsed.potential
+    }))
   }
 }
 
-function showManualEquipmentPicker() {
+function parseGrimoireCatalogOcr(text: string): BuildCatalogOcrParseResult {
+  const parsed = parseGrimoireOcrText(text)
+  const ignoredLabels = [
+    props.character?.name,
+    ...selectedLineage.value.flatMap(item => [
+      item.id,
+      item.slug,
+      item.displayName,
+      localizedText(item.name, 'zh'),
+      localizedText(item.name, 'en')
+    ])
+  ]
+  return {
+    lines: grimoireOcrMatchLines(parsed, ignoredLabels).map(line => ({ id: line.id, text: line.text }))
+  }
+}
+
+const artifactOcrPartIndex: Record<BuildArtifactSlot, 0 | 1 | 2 | 3> = {
+  Rune: 0,
+  Jewel: 1,
+  Scroll: 2,
+  Relic: 3
+}
+
+function parseArtifactCatalogOcr(text: string): BuildCatalogOcrParseResult {
+  if (!artifactSlot.value) return { lines: [] }
+  const part = parseArtifactOcrText(text).parts.find(item => item.slot === artifactSlot.value)
+  if (!part) return { lines: [] }
+  const line = artifactOcrMatchLines({ parts: [part] })[0]
+  return {
+    lines: line ? [{
+      id: line.id,
+      text: line.text,
+      refineLevel: part.refineLevel,
+      partIndex: artifactOcrPartIndex[part.slot],
+      sourceSlot: t(`builder.loadout.artifactSlots.${part.slot}`),
+      suffixText: part.suffixText
+    }] : []
+  }
+}
+
+function showManualCatalogPicker() {
   pickerBrowsing.value = true
   void nextTick(() => pickerSection.value?.querySelector<HTMLInputElement>('.build-snapshot-picker__search input')?.focus())
 }
 
-function applyEquipmentOcrSuggestion(suggestion: EquipmentOcrSuggestion) {
-  if (!isEquipmentOcrOptionCompatible(suggestion.option)) {
-    equipmentOcrState.value = 'incompatible'
-    return
-  }
-  chooseEquipment(suggestion.option, equipmentOcrParsed.value)
-  equipmentOcrState.value = 'applied'
+function applyEquipmentCatalogOcr(option: BuilderOption, source: BuildCatalogOcrParsedLine) {
+  if (!equipmentOcrOptions.value.some(item => item.id === option.id)) return
+  chooseEquipment(option, source)
+}
+
+function applyArtifactCatalogOcr(option: BuilderOption, source: BuildCatalogOcrParsedLine) {
+  if (!artifactOcrOptions.value.some(item => item.id === option.id)) return
+  chooseArtifact(option, source)
+}
+
+function applyGrimoireCatalogOcr(option: BuilderOption) {
+  if (!grimoireOcrOptions.value.some(item => item.id === option.id)) return
+  chooseGrimoire(option)
 }
 
 function openEquipment(slot: BuildEquipmentSlot) {
-  if (equipmentSlot.value !== slot) resetEquipmentOcrSession()
   equipmentSlot.value = slot
   artifactSlot.value = undefined
   grimoireIndex.value = undefined
@@ -401,7 +337,6 @@ function openEquipment(slot: BuildEquipmentSlot) {
 }
 
 function openArtifact(slot: BuildArtifactSlot) {
-  resetEquipmentOcrSession()
   artifactSlot.value = slot
   equipmentSlot.value = undefined
   grimoireIndex.value = undefined
@@ -411,7 +346,6 @@ function openArtifact(slot: BuildArtifactSlot) {
 }
 
 function openGrimoire(index: number) {
-  resetEquipmentOcrSession()
   grimoireIndex.value = index
   equipmentSlot.value = undefined
   artifactSlot.value = undefined
@@ -428,7 +362,6 @@ async function revealPicker() {
 }
 
 function closePicker() {
-  resetEquipmentOcrSession()
   equipmentSlot.value = undefined
   artifactSlot.value = undefined
   grimoireIndex.value = undefined
@@ -436,7 +369,7 @@ function closePicker() {
   pickerBrowsing.value = true
 }
 
-function chooseEquipment(item: BuilderOption, recognized?: EquipmentOcrParse) {
+function chooseEquipment(item: BuilderOption, recognized?: BuildCatalogOcrParsedLine) {
   if (!equipmentSlot.value) return
   const previous = activeEquipment.value?.id === item.id ? activeEquipment.value : undefined
   const next: BuildEquipment = {
@@ -509,10 +442,10 @@ function defaultPartIndex(item: BuilderOption) {
   return item.parts?.[0]?.index || 0
 }
 
-function chooseArtifact(item: BuilderOption) {
+function chooseArtifact(item: BuilderOption, recognized?: BuildCatalogOcrParsedLine) {
   if (!artifactSlot.value) return
   const previous = activeArtifact.value?.id === item.id ? activeArtifact.value : undefined
-  const partIndex = previous?.partIndex ?? defaultPartIndex(item)
+  const partIndex = recognized?.partIndex ?? previous?.partIndex ?? defaultPartIndex(item)
   const next: BuildArtifact = {
     slot: artifactSlot.value,
     partIndex: Math.min(3, Math.max(0, partIndex)) as 0 | 1 | 2 | 3,
@@ -520,7 +453,7 @@ function chooseArtifact(item: BuilderOption) {
     slug: item.slug,
     ...optionNames(item),
     partIcon: item.parts?.find(part => part.index === partIndex)?.icon || item.icon || undefined,
-    refineLevel: previous?.refineLevel,
+    refineLevel: recognized?.refineLevel ?? previous?.refineLevel,
     actualAffixes: previous?.actualAffixes || [],
     gem: previous?.gem
   }
@@ -799,53 +732,16 @@ function runtimeEffectSummary(effect: RuntimeEffect) {
         <button type="button" :aria-label="t('builder.loadout.editor.close')" @click="closePicker">×</button>
       </header>
       <p class="build-snapshot-picker__notice">{{ t('builder.loadout.editor.equipmentSlotNotice') }}</p>
-      <div class="build-snapshot-ocr">
-        <button
-          class="build-snapshot-ocr__toggle"
-          type="button"
-          :aria-expanded="showEquipmentOcr"
-          aria-controls="build-equipment-ocr-panel"
-          @click="toggleEquipmentOcr"
-        >
-          <span aria-hidden="true">▣</span>
-          <strong>{{ t('builder.loadout.editor.ocr.toggle') }}</strong>
-          <small>{{ showEquipmentOcr ? t('builder.loadout.editor.ocr.collapse') : t('builder.loadout.editor.ocr.expand') }}</small>
-        </button>
-        <div v-if="showEquipmentOcr" id="build-equipment-ocr-panel" class="build-snapshot-ocr__panel">
-          <BuildOcrImporter :labels="equipmentOcrLabels" :max-text-length="10000" @confirm="confirmEquipmentOcr" />
-          <div
-            v-if="equipmentOcrStatusText"
-            class="build-snapshot-ocr__status"
-            :class="`build-snapshot-ocr__status--${equipmentOcrState}`"
-            :aria-busy="equipmentOcrState === 'matching'"
-            aria-live="polite"
-          >
-            <strong>{{ equipmentOcrStatusText }}</strong>
-            <span v-if="equipmentOcrText">{{ t('builder.loadout.editor.ocr.confirmedTextKept', { count: equipmentOcrText.length }) }}</span>
-          </div>
-          <p v-if="equipmentOcrParsed && (equipmentOcrParsed.refineLevel !== undefined || equipmentOcrParsed.potential !== undefined)" class="build-snapshot-ocr__detected">
-            <strong>{{ t('builder.loadout.editor.ocr.detected') }}</strong>
-            <span v-if="equipmentOcrParsed.refineLevel !== undefined">{{ t('builder.loadout.editor.ocr.detectedRefine', { value: equipmentOcrParsed.refineLevel }) }}</span>
-            <span v-if="equipmentOcrParsed.potential !== undefined">{{ t('builder.loadout.editor.ocr.detectedPotential', { value: equipmentOcrParsed.potential }) }}</span>
-          </p>
-          <div v-if="equipmentOcrSuggestions.length" class="build-snapshot-ocr__results">
-            <h4>{{ t('builder.loadout.editor.ocr.candidatesTitle') }}</h4>
-            <p>{{ t('builder.loadout.editor.ocr.candidatesHint') }}</p>
-            <article v-for="suggestion in equipmentOcrSuggestions" :key="suggestion.option.id">
-              <img v-if="suggestion.option.icon" :src="suggestion.option.icon" alt="" loading="lazy">
-              <b v-else aria-hidden="true">{{ optionName(suggestion.option).slice(0, 2) }}</b>
-              <div>
-                <strong>{{ optionName(suggestion.option) }}</strong>
-                <span>{{ t(`builder.loadout.editor.ocr.${suggestion.matchType}`) }} · {{ t('builder.loadout.editor.ocr.matchScore', { value: Math.round(suggestion.score * 100) }) }}</span>
-              </div>
-              <button type="button" @click="applyEquipmentOcrSuggestion(suggestion)">{{ t('builder.loadout.editor.ocr.applyCandidate') }}</button>
-            </article>
-          </div>
-          <button v-if="equipmentOcrState !== 'idle'" class="build-snapshot-ocr__manual" type="button" @click="showManualEquipmentPicker">
-            {{ t('builder.loadout.editor.ocr.manualFallback') }}
-          </button>
-        </div>
-      </div>
+      <BuildCatalogOcrPanel
+        :key="`equipment:${equipmentSlot}`"
+        kind="equipment"
+        :options="equipmentOcrOptions"
+        layout="document"
+        :kind-labels="equipmentOcrKindLabels"
+        :parse-text="parseEquipmentCatalogOcr"
+        @apply="applyEquipmentCatalogOcr"
+        @manual="showManualCatalogPicker"
+      />
       <div v-if="activeEquipment" class="build-snapshot-config">
         <header><h4>{{ optionName(activeEquipmentOption) }}</h4><div class="build-snapshot-config__actions"><button type="button" @click="pickerBrowsing = true">{{ t('builder.loadout.editor.changeSelection') }}</button><button type="button" class="danger" @click="removeEquipment">{{ t('builder.loadout.editor.removeSelection') }}</button></div></header>
         <div class="build-snapshot-config__fields">
@@ -884,6 +780,16 @@ function runtimeEffectSummary(effect: RuntimeEffect) {
         <button type="button" :aria-label="t('builder.loadout.editor.close')" @click="closePicker">×</button>
       </header>
       <p class="build-snapshot-picker__notice">{{ t('builder.loadout.editor.artifactPartNotice') }}</p>
+      <BuildCatalogOcrPanel
+        :key="`artifact:${artifactSlot}`"
+        kind="artifact"
+        :options="artifactOcrOptions"
+        layout="sparse"
+        :kind-labels="artifactOcrKindLabels"
+        :parse-text="parseArtifactCatalogOcr"
+        @apply="applyArtifactCatalogOcr"
+        @manual="showManualCatalogPicker"
+      />
       <div v-if="activeArtifact" class="build-snapshot-config">
         <header><h4>{{ optionName(activeArtifactOption) }}</h4><div class="build-snapshot-config__actions"><button type="button" @click="pickerBrowsing = true">{{ t('builder.loadout.editor.changeSelection') }}</button><button type="button" class="danger" @click="removeArtifact">{{ t('builder.loadout.editor.removeSelection') }}</button></div></header>
         <div class="build-snapshot-config__fields">
@@ -912,6 +818,16 @@ function runtimeEffectSummary(effect: RuntimeEffect) {
         <div><span>{{ t('builder.loadout.editor.grimoireSlot') }}</span><h3>{{ t('builder.loadout.editor.slotNumber', { number: Number(grimoireIndex) + 1 }) }}</h3></div>
         <button type="button" :aria-label="t('builder.loadout.editor.close')" @click="closePicker">×</button>
       </header>
+      <BuildCatalogOcrPanel
+        :key="`grimoire:${grimoireIndex}`"
+        kind="grimoire"
+        :options="grimoireOcrOptions"
+        layout="sparse"
+        :kind-labels="grimoireOcrKindLabels"
+        :parse-text="parseGrimoireCatalogOcr"
+        @apply="applyGrimoireCatalogOcr"
+        @manual="showManualCatalogPicker"
+      />
       <div v-if="activeGrimoire" class="build-snapshot-config build-snapshot-grimoire-detail">
         <header><h4>{{ optionName(activeGrimoireOption) }}</h4><div class="build-snapshot-config__actions"><button type="button" @click="pickerBrowsing = true">{{ t('builder.loadout.editor.changeSelection') }}</button><button type="button" class="danger" @click="removeGrimoire">{{ t('builder.loadout.editor.removeSelection') }}</button></div></header>
         <template v-if="activeGrimoireOption?.passive">
@@ -1009,33 +925,6 @@ function runtimeEffectSummary(effect: RuntimeEffect) {
 .build-snapshot-picker__choices small { margin-top: 3px; color: #7f928d; font-size: 8px; }
 .build-snapshot-picker__choices i { width: 19px; height: 19px; display: grid; place-items: center; border-radius: 6px; color: #fff; background: #168d7e; font-size: 10px; font-style: normal; }
 .build-snapshot-picker__remove { min-height: 44px; margin-top: 10px; padding: 8px 13px; border: 0; border-radius: 9px; color: #9c4242; background: #fbe9e7; cursor: pointer; font-size: 10px; font-weight: 750; }
-.build-snapshot-ocr { display: grid; gap: 10px; margin-bottom: 12px; }
-.build-snapshot-ocr__toggle { width: 100%; min-height: 52px; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 11px; border: 1px solid #bcd8d2; border-radius: 11px; color: #17433e; background: #f4faf8; cursor: pointer; text-align: left; }
-.build-snapshot-ocr__toggle > span { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; color: #fff; background: #168d7e; font-size: 16px; }
-.build-snapshot-ocr__toggle strong { font-size: 11px; }
-.build-snapshot-ocr__toggle small { color: #627c76; font-size: 9px; }
-.build-snapshot-ocr__panel { display: grid; gap: 10px; min-width: 0; }
-.build-snapshot-ocr__status { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid #c8ddd8; border-radius: 10px; color: #365d56; background: #edf6f3; font-size: 9px; line-height: 1.5; }
-.build-snapshot-ocr__status strong { font-size: 10px; }
-.build-snapshot-ocr__status--failed, .build-snapshot-ocr__status--rate-limited { border-color: #ebc8c4; color: #884841; background: #fff2f0; }
-.build-snapshot-ocr__status--applied { border-color: #acd8c7; color: #17634f; background: #eaf8f1; }
-.build-snapshot-ocr__detected { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 0; padding: 9px 11px; border-radius: 10px; color: #4b6862; background: #f2f6f5; font-size: 9px; }
-.build-snapshot-ocr__detected strong { color: #1d5149; }
-.build-snapshot-ocr__detected span { padding: 4px 7px; border-radius: 999px; color: #116b5e; background: #dcf1ec; font-weight: 750; }
-.build-snapshot-ocr__results { display: grid; gap: 8px; }
-.build-snapshot-ocr__results h4, .build-snapshot-ocr__results p { margin: 0; }
-.build-snapshot-ocr__results h4 { color: #183f39; font-size: 13px; }
-.build-snapshot-ocr__results > p { color: #6f847f; font-size: 9px; line-height: 1.5; }
-.build-snapshot-ocr__results article { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 9px; border: 1px solid #d5e4e0; border-radius: 11px; background: #fff; }
-.build-snapshot-ocr__results article > img, .build-snapshot-ocr__results article > b { width: 42px; height: 42px; object-fit: contain; border-radius: 9px; background: #edf5f2; }
-.build-snapshot-ocr__results article > b { display: grid; place-items: center; color: #168d7e; font-size: 10px; }
-.build-snapshot-ocr__results article > div { min-width: 0; }
-.build-snapshot-ocr__results article > div strong, .build-snapshot-ocr__results article > div span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.build-snapshot-ocr__results article > div strong { color: #193f39; font-size: 10px; }
-.build-snapshot-ocr__results article > div span { margin-top: 4px; color: #6f847f; font-size: 8px; }
-.build-snapshot-ocr__results article > button, .build-snapshot-ocr__manual { min-height: 44px; padding: 8px 12px; border: 0; border-radius: 9px; font: inherit; font-size: 9px; font-weight: 800; cursor: pointer; }
-.build-snapshot-ocr__results article > button { color: #fff; background: #168d7e; }
-.build-snapshot-ocr__manual { justify-self: start; color: #22685d; background: #e5f3ef; }
 .build-snapshot-config { margin-top: 13px; padding-top: 13px; border-top: 1px solid #dce8e3; }
 .build-snapshot-config + .build-snapshot-picker__search { margin-top: 13px; }
 .build-snapshot-config > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -1121,10 +1010,5 @@ function runtimeEffectSummary(effect: RuntimeEffect) {
   .build-snapshot-config__actions { justify-content: flex-start; }
   .build-snapshot-legacy__items article { grid-template-columns: 1fr; }
   .build-snapshot-legacy__items button { width: 100%; }
-  .build-snapshot-ocr__toggle { grid-template-columns: 34px minmax(0, 1fr); }
-  .build-snapshot-ocr__toggle small { grid-column: 2; }
-  .build-snapshot-ocr__results article { grid-template-columns: 42px minmax(0, 1fr); }
-  .build-snapshot-ocr__results article > button { grid-column: 1 / -1; width: 100%; }
-  .build-snapshot-ocr__manual { width: 100%; }
 }
 </style>

@@ -34,6 +34,31 @@ export interface EquipmentOcrParse {
   potential?: number
 }
 
+export type OcrRecognitionLayout = 'document' | 'sparse'
+export type BuildCatalogOcrKind = 'equipment' | 'artifact' | 'grimoire'
+
+export interface BuildCatalogOcrKindLabels {
+  singular: string
+  plural: string
+  screenshot: string
+}
+
+export interface BuildCatalogOcrParsedLine {
+  id: string
+  text: string
+  refineLevel?: number
+  potential?: number
+  partIndex?: 0 | 1 | 2 | 3
+  sourceSlot?: string
+  suffixText?: string
+}
+
+export interface BuildCatalogOcrParseResult {
+  lines: BuildCatalogOcrParsedLine[]
+}
+
+export type BuildCatalogOcrParser = (text: string) => BuildCatalogOcrParseResult
+
 export type OcrCatalogMatchType = 'exact' | 'fuzzy'
 
 export interface OcrCatalogCandidate {

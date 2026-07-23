@@ -3,6 +3,7 @@ import type {
   BrowserOcrErrorCode,
   OcrMachineState,
   OcrPhase,
+  OcrRecognitionLayout,
   OcrReviewDraft
 } from '~/types/ocr'
 import {
@@ -10,9 +11,11 @@ import {
   OcrOperationCancelledError,
   OcrOperationCoordinator
 } from '~/utils/ocr-operation'
+import { ocrPageSegmentationMode } from '~/utils/ocr-layout'
 
 interface OcrWorker {
   recognize(image: Blob): Promise<{ data: { text: string } }>
+  setParameters(parameters: { tessedit_pageseg_mode: '3' | '11' }): Promise<unknown>
   terminate(): Promise<unknown>
 }
 
@@ -134,7 +137,7 @@ export function useBrowserOcr() {
     else if (phase.value !== 'cancelling') phase.value = 'loading'
   }
 
-  async function recognize(image: Blob): Promise<OcrReviewDraft> {
+  async function recognize(image: Blob, options: { layout?: OcrRecognitionLayout } = {}): Promise<OcrReviewDraft> {
     if (!isBrowserRuntime()) {
       throw new BrowserOcrError('client-only', 'OCR runs only inside the browser.')
     }
@@ -154,6 +157,10 @@ export function useBrowserOcr() {
 
       try {
         const worker = await getSharedWorker(operation.cancellation)
+        await operation.cancellation.waitFor(worker.setParameters({
+          tessedit_pageseg_mode: ocrPageSegmentationMode(options.layout || 'document')
+        }))
+        operation.cancellation.throwIfCancelled()
 
         phase.value = 'recognizing'
         statusText.value = 'recognizing text'

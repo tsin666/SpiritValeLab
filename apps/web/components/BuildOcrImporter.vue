@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { BrowserOcrError, useBrowserOcr } from '~/composables/useBrowserOcr'
-import type { OcrPhase, OcrReviewDraft, PreparedOcrImage } from '~/types/ocr'
+import type { OcrPhase, OcrRecognitionLayout, OcrReviewDraft, PreparedOcrImage } from '~/types/ocr'
 import {
   OcrFileError,
   prepareOcrImage
@@ -69,13 +69,16 @@ const DEFAULT_LABELS: OcrImporterLabels = {
 
 const props = withDefaults(defineProps<{
   labels?: Partial<OcrImporterLabels>
+  layout?: OcrRecognitionLayout
   maxTextLength?: number
 }>(), {
+  layout: 'document',
   maxTextLength: 10_000
 })
 
 const emit = defineEmits<{
   confirm: [draft: OcrReviewDraft]
+  reset: []
 }>()
 
 const labels = computed<OcrImporterLabels>(() => ({ ...DEFAULT_LABELS, ...props.labels }))
@@ -125,6 +128,7 @@ async function handleFileChange(event: Event) {
 
   const currentToken = ++selectionToken
   if (ocr.isBusy.value) await ocr.cancel()
+  emit('reset')
   releasePreview()
   ocr.reset()
   reviewText.value = ''
@@ -153,11 +157,12 @@ async function handleFileChange(event: Event) {
 
 async function runOcr() {
   if (!preparedImage.value || isBusy.value) return
+  emit('reset')
   localError.value = ''
   reviewText.value = ''
 
   try {
-    const draft = await ocr.recognize(preparedImage.value.blob)
+    const draft = await ocr.recognize(preparedImage.value.blob, { layout: props.layout })
     reviewText.value = draft.text.slice(0, props.maxTextLength)
   } catch (caught) {
     if (caught instanceof BrowserOcrError && caught.code === 'cancelled') return
@@ -179,6 +184,7 @@ async function clearImporter() {
   localError.value = ''
   preparationPhase.value = 'idle'
   if (fileInput.value) fileInput.value.value = ''
+  emit('reset')
 }
 
 function confirmReview() {
